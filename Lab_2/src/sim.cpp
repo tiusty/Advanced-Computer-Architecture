@@ -41,7 +41,7 @@ void print_stats(void);
 /*********************************************************************
  * Params and Globals
  *********************************************************************/
-uint32_t  PIPE_WIDTH=1;
+uint32_t  PIPE_WIDTH=2;
 uint32_t  ENABLE_MEM_FWD=0;
 uint32_t  ENABLE_EXE_FWD=0;
 uint32_t  BPRED_POLICY=0; // 0:Perf 1:AlwaysTaken 2:Gshare

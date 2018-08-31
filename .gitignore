@@ -2,7 +2,7 @@
 *.o
 
 # Ideal files
-Lab_2/src/.idea/*
+Lab_2/src/.idea
 
 # ignore swap files
 *.swp

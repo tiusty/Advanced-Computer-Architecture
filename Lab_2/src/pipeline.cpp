@@ -131,13 +131,12 @@ void pipe_cycle(Pipeline *p)
 void pipe_cycle_WB(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        if (p->pipe_latch[MEM_LATCH])
         if (p->pipe_latch[MEM_LATCH][ii].valid) {
 
             p->stat_retired_inst++;
-            if (p->pipe_latch[MEM_LATCH]->tr_entry.dest_needed) {
+            if (p->pipe_latch[MEM_LATCH][ii].tr_entry.dest_needed) {
                 std::vector<uint8_t, std::allocator<uint8_t >>::iterator it;
-                it = std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[MEM_LATCH]->tr_entry.dest);
+                it = std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[MEM_LATCH][ii].tr_entry.dest);
                 if (it != reg_used.end()) {
                     reg_used.erase(it);
                 }
@@ -160,7 +159,6 @@ void pipe_cycle_MEM(Pipeline *p){
       {
           p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
       }
-
   }
 }
 
@@ -185,29 +183,39 @@ void pipe_cycle_EX(Pipeline *p){
 void pipe_cycle_ID(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        p->pipe_latch[ID_LATCH][ii].stall = false;
-        if (!p->pipe_latch[ID_LATCH][ii].stall) {
+        // If the register does not have any dependency's then no stalling
 
-            p->pipe_latch[ID_LATCH][ii].valid = true;
+        // If the register does have dependency's then check to see if the dependencies are in the list
+        //  if it is then stall, if not then continue
+
+        if (!p->pipe_latch[ID_LATCH][ii].stall) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
-            if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
-                if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
+        }
+
+        // Checks to see if there are any needed registers, i.e depedencies
+        if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed ||
+            p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
+
+            // Checks to see if the dependencies exist in the used registers
+            if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
+                reg_used.end()
+                and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
                     reg_used.end()
-                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
-                        reg_used.end()
-                        and
-                        std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.dest) ==
-                        reg_used.end()) {
-                    // If the destination is needed then add that as being written to so future
-                    //  decodes halt until this destination is written back to
-                    if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
-                        reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
-                    }
+                and
+                std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.dest) ==
+                reg_used.end()) {
+
+                // If it doesn't then add the list to the chart and contiunue
+                if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
+                    reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
                 }
-                else {
-                    p->pipe_latch[ID_LATCH][ii].stall = true;
-                }
+                p->pipe_latch[ID_LATCH][ii].stall = false;
+            } else {
+                p->pipe_latch[ID_LATCH][ii].stall = true;
             }
+        } else {
+            p->pipe_latch[ID_LATCH][ii].stall = false;
+        }
 
             if (ENABLE_MEM_FWD) {
                 // todo
@@ -218,7 +226,6 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
-    }
 }
 
 //--------------------------------------------------------------------//
@@ -230,7 +237,7 @@ void pipe_cycle_FE(Pipeline *p) {
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
         // copy the op in FE LATCH
-        if (!p->pipe_latch[ID_LATCH][ii].stall) {
+        if (!p->pipe_latch[FE_LATCH][ii].stall) {
             pipe_get_fetch_op(p, &fetch_op);
 
             if (BPRED_POLICY) {
@@ -240,6 +247,7 @@ void pipe_cycle_FE(Pipeline *p) {
             p->pipe_latch[FE_LATCH][ii] = fetch_op;
 
         }
+        p->pipe_latch[FE_LATCH][ii].stall = p->pipe_latch[ID_LATCH][ii].stall;
 
     }
 }
