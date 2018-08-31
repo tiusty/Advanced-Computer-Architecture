@@ -157,12 +157,12 @@ void pipe_cycle_WB(Pipeline *p) {
 void pipe_cycle_MEM(Pipeline *p){
   int ii;
   for(ii=0; ii<PIPE_WIDTH; ii++){
+      p->pipe_latch[MEM_LATCH][ii].valid = p->pipe_latch[EX_LATCH][ii].valid;
       if (p->pipe_latch[MEM_LATCH][ii].valid)
       {
           p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
       }
 
-      p->pipe_latch[MEM_LATCH][ii].valid = p->pipe_latch[EX_LATCH][ii].valid;
   }
 }
 
@@ -171,6 +171,7 @@ void pipe_cycle_MEM(Pipeline *p){
 void pipe_cycle_EX(Pipeline *p){
   int ii;
   for(ii=0; ii<PIPE_WIDTH; ii++){
+      p->pipe_latch[EX_LATCH][ii].valid = p->pipe_latch[ID_LATCH][ii].valid;
       if (p->pipe_latch[EX_LATCH][ii].valid)
       {
           p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
@@ -178,7 +179,6 @@ void pipe_cycle_EX(Pipeline *p){
 
       // If the ID latch is marked as not valid because of halting, then finish the last transfer but then
       // don't transfer anymore until the ID latch is valid again
-      p->pipe_latch[EX_LATCH][ii].valid = p->pipe_latch[ID_LATCH][ii].valid;
   }
 }
 
