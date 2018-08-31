@@ -15,7 +15,6 @@ extern int32_t ENABLE_MEM_FWD;
 extern int32_t ENABLE_EXE_FWD;
 extern int32_t BPRED_POLICY;
 std::vector<uint8_t> reg_used;
-bool stall_fetch = false;
 
 /**********************************************************************
  * Support Function: Read 1 Trace Record From File and populate Fetch Op
@@ -116,7 +115,6 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
-    stall_fetch = false;
 
     pipe_cycle_WB(p);
     pipe_cycle_MEM(p);
@@ -187,7 +185,8 @@ void pipe_cycle_EX(Pipeline *p){
 void pipe_cycle_ID(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        if (!stall_fetch) {
+        p->pipe_latch[ID_LATCH][ii].stall = false;
+        if (!p->pipe_latch[ID_LATCH][ii].stall) {
 
             p->pipe_latch[ID_LATCH][ii].valid = true;
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
@@ -206,7 +205,7 @@ void pipe_cycle_ID(Pipeline *p) {
                     }
                 }
                 else {
-                    stall_fetch = true;
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
                     p->pipe_latch[ID_LATCH][ii].valid = false;
                 }
             }
@@ -232,7 +231,7 @@ void pipe_cycle_FE(Pipeline *p) {
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
         // copy the op in FE LATCH
-        if (!stall_fetch) {
+        if (!p->pipe_latch[ID_LATCH][ii].stall) {
             pipe_get_fetch_op(p, &fetch_op);
 
             if (BPRED_POLICY) {
