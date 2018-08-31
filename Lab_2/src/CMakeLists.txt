@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 2.6)
+project (lab2)
+set(CMAKE_CXX_STANDARD 11)
+include_directories(trace.h bpred.h pipeline.h)
+add_executable(Lab2 sim.cpp pipeline.cpp bpred.cpp)

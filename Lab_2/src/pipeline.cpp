@@ -7,11 +7,15 @@
 
 #include "pipeline.h"
 #include <cstdlib>
+#include <vector>
+#include <algorithm>
 
 extern int32_t PIPE_WIDTH;
 extern int32_t ENABLE_MEM_FWD;
 extern int32_t ENABLE_EXE_FWD;
 extern int32_t BPRED_POLICY;
+std::vector<uint8_t> reg_used;
+bool stall_fetch = false;
 
 /**********************************************************************
  * Support Function: Read 1 Trace Record From File and populate Fetch Op
@@ -112,6 +116,7 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
+    stall_fetch = false;
 
     pipe_cycle_WB(p);
     pipe_cycle_MEM(p);
@@ -125,16 +130,26 @@ void pipe_cycle(Pipeline *p)
  * -----------  DO NOT MODIFY THE CODE ABOVE THIS LINE ----------------
  **********************************************************************/
 
-void pipe_cycle_WB(Pipeline *p){
-  int ii;
-  for(ii=0; ii<PIPE_WIDTH; ii++){
-    if(p->pipe_latch[MEM_LATCH][ii].valid){
-      p->stat_retired_inst++;
-      if(p->pipe_latch[MEM_LATCH][ii].op_id >= p->halt_op_id){
-	p->halt=true;
-      }
+void pipe_cycle_WB(Pipeline *p) {
+    int ii;
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        if (p->pipe_latch[MEM_LATCH])
+        if (p->pipe_latch[MEM_LATCH][ii].valid) {
+
+            p->stat_retired_inst++;
+            if (p->pipe_latch[MEM_LATCH]->tr_entry.dest_needed) {
+                std::vector<uint8_t, std::allocator<uint8_t >>::iterator it;
+                it = std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[MEM_LATCH]->tr_entry.dest);
+                if (it != reg_used.end()) {
+                    reg_used.erase(it);
+                }
+            }
+
+            if (p->pipe_latch[MEM_LATCH][ii].op_id >= p->halt_op_id) {
+                p->halt = true;
+            }
+        }
     }
-  }
 }
 
 //--------------------------------------------------------------------//
@@ -142,7 +157,12 @@ void pipe_cycle_WB(Pipeline *p){
 void pipe_cycle_MEM(Pipeline *p){
   int ii;
   for(ii=0; ii<PIPE_WIDTH; ii++){
-    p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
+      if (p->pipe_latch[MEM_LATCH][ii].valid)
+      {
+          p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
+      }
+
+      p->pipe_latch[MEM_LATCH][ii].valid = p->pipe_latch[EX_LATCH][ii].valid;
   }
 }
 
@@ -151,47 +171,80 @@ void pipe_cycle_MEM(Pipeline *p){
 void pipe_cycle_EX(Pipeline *p){
   int ii;
   for(ii=0; ii<PIPE_WIDTH; ii++){
-    p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
+      if (p->pipe_latch[EX_LATCH][ii].valid)
+      {
+          p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
+      }
+
+      // If the ID latch is marked as not valid because of halting, then finish the last transfer but then
+      // don't transfer anymore until the ID latch is valid again
+      p->pipe_latch[EX_LATCH][ii].valid = p->pipe_latch[ID_LATCH][ii].valid;
   }
 }
 
 //--------------------------------------------------------------------//
 
-void pipe_cycle_ID(Pipeline *p){
-int ii;
-  for(ii=0; ii<PIPE_WIDTH; ii++){
-    p->pipe_latch[ID_LATCH][ii]=p->pipe_latch[FE_LATCH][ii];
+void pipe_cycle_ID(Pipeline *p) {
+    int ii;
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        if (!stall_fetch) {
 
-    if(ENABLE_MEM_FWD){
-      // todo
-    }
+            p->pipe_latch[ID_LATCH][ii].valid = true;
+            p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
+            if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
+                if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.src1_reg) ==
+                    reg_used.end()
+                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.src2_reg) ==
+                        reg_used.end()
+                        and
+                        std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.dest) ==
+                        reg_used.end()) {
+                    // If the destination is needed then add that as being written to so future
+                    //  decodes halt until this destination is written back to
+                    if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
+                        reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
+                    }
+                }
+                else {
+                    stall_fetch = true;
+                    p->pipe_latch[ID_LATCH][ii].valid = false;
+                }
+            }
 
-    if(ENABLE_EXE_FWD){
-      // todo
+            if (ENABLE_MEM_FWD) {
+                // todo
+            }
+
+            if (ENABLE_EXE_FWD) {
+                // todo
+            }
+        }
+
     }
-  }
 }
 
 //--------------------------------------------------------------------//
 
-void pipe_cycle_FE(Pipeline *p){
-  int ii;
-  Pipeline_Latch fetch_op;
-  bool tr_read_success;
+void pipe_cycle_FE(Pipeline *p) {
+    int ii;
+    Pipeline_Latch fetch_op;
+    bool tr_read_success;
 
-  for(ii=0; ii<PIPE_WIDTH; ii++){
-    pipe_get_fetch_op(p, &fetch_op);
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        // copy the op in FE LATCH
+        if (!stall_fetch) {
+            pipe_get_fetch_op(p, &fetch_op);
 
-    if(BPRED_POLICY){
-      pipe_check_bpred(p, &fetch_op);
+            if (BPRED_POLICY) {
+                pipe_check_bpred(p, &fetch_op);
+            }
+
+            p->pipe_latch[FE_LATCH][ii] = fetch_op;
+
+        }
+
     }
-    
-    // copy the op in FE LATCH
-    p->pipe_latch[FE_LATCH][ii]=fetch_op;
-  }
-  
 }
-
 
 //--------------------------------------------------------------------//
 
