@@ -1,0 +1,11 @@
+
+Stat		libq		bzip2		mcf		gcc
+PERC_ALU_OP	36.364		 9.176		16.539		12.520		
+PERC_LD_OP	18.182		49.753		47.362		41.651		
+PERC_ST_OP	18.182		11.598		11.280		24.412		
+PERC_CBR_OP	9.091		10.462		15.500		 9.652		
+PERC_OTHER_OP	18.182		19.010		 9.319		11.765		
+CPI		1.545		 1.823		 1.896		 1.854		
+UNIQUE_PC	    9		   764		   524		   820	
+Your approximate score for Lab 1 out of 5 points is: 5.000000
+
