@@ -169,7 +169,7 @@ void pipe_cycle_MEM(Pipeline *p){
 void pipe_cycle_EX(Pipeline *p){
   int ii;
   for(ii=0; ii<PIPE_WIDTH; ii++){
-      p->pipe_latch[EX_LATCH][ii].valid = p->pipe_latch[ID_LATCH][ii].valid;
+      p->pipe_latch[EX_LATCH][ii].valid = !p->pipe_latch[ID_LATCH][ii].stall;
       if (p->pipe_latch[EX_LATCH][ii].valid)
       {
           p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
@@ -206,7 +206,6 @@ void pipe_cycle_ID(Pipeline *p) {
                 }
                 else {
                     p->pipe_latch[ID_LATCH][ii].stall = true;
-                    p->pipe_latch[ID_LATCH][ii].valid = false;
                 }
             }
 
