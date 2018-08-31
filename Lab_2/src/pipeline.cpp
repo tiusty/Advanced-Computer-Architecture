@@ -192,12 +192,12 @@ void pipe_cycle_ID(Pipeline *p) {
             p->pipe_latch[ID_LATCH][ii].valid = true;
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
             if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
-                if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.src1_reg) ==
+                if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
                     reg_used.end()
-                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.src2_reg) ==
+                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
                         reg_used.end()
                         and
-                        std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[FE_LATCH]->tr_entry.dest) ==
+                        std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.dest) ==
                         reg_used.end()) {
                     // If the destination is needed then add that as being written to so future
                     //  decodes halt until this destination is written back to

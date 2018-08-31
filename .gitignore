@@ -3,3 +3,6 @@
 
 # Ideal files
 *.idea
+
+# ignore swap files
+*.swp
