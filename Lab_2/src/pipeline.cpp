@@ -192,18 +192,20 @@ void pipe_cycle_ID(Pipeline *p) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
         }
 
+        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read)
+        {
+            p->pipe_latch[ID_LATCH][ii].stall = (p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write and p->pipe_latch[EX_LATCH][ii].valid)
+                                                || (p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write and p->pipe_latch[MEM_LATCH][ii].valid);
+        }
+
         // Checks to see if there are any needed registers, i.e depedencies
-        if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed ||
-            p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
+        else if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed) {
 
             // Checks to see if the dependencies exist in the used registers
             if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
                 reg_used.end()
                 and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
-                    reg_used.end()
-                and
-                std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.dest) ==
-                reg_used.end()) {
+                    reg_used.end() ) {
 
                 // If it doesn't then add the list to the chart and contiunue
                 if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
