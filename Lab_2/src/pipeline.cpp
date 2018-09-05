@@ -15,6 +15,7 @@ extern int32_t ENABLE_MEM_FWD;
 extern int32_t ENABLE_EXE_FWD;
 extern int32_t BPRED_POLICY;
 std::vector<uint8_t> reg_used;
+bool cc_write = false;
 
 /**********************************************************************
  * Support Function: Read 1 Trace Record From File and populate Fetch Op
@@ -115,6 +116,7 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
+    cc_write = false;
 
     pipe_cycle_WB(p);
     pipe_cycle_MEM(p);
@@ -158,6 +160,7 @@ void pipe_cycle_MEM(Pipeline *p){
       if (p->pipe_latch[MEM_LATCH][ii].valid)
       {
           p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
+          cc_write = cc_write || p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write;
       }
   }
 }
@@ -171,6 +174,7 @@ void pipe_cycle_EX(Pipeline *p){
       if (p->pipe_latch[EX_LATCH][ii].valid)
       {
           p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
+          cc_write = cc_write || p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write;
       }
 
       // If the ID latch is marked as not valid because of halting, then finish the last transfer but then
@@ -190,8 +194,7 @@ void pipe_cycle_ID(Pipeline *p) {
         }
 
         // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
-        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and ((p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write and p->pipe_latch[EX_LATCH][ii].valid)
-           || (p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write and p->pipe_latch[MEM_LATCH][ii].valid)))
+        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and cc_write)
         {
             p->pipe_latch[ID_LATCH][ii].stall = true;
         }
