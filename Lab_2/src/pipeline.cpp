@@ -183,40 +183,41 @@ void pipe_cycle_EX(Pipeline *p){
 void pipe_cycle_ID(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        // If the register does not have any dependency's then no stalling
 
-        // If the register does have dependency's then check to see if the dependencies are in the list
-        //  if it is then stall, if not then continue
-
+        // If the latch is not stalled then pull a new instruction
         if (!p->pipe_latch[ID_LATCH][ii].stall) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
         }
 
-        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read)
+        // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
+        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and ((p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write and p->pipe_latch[EX_LATCH][ii].valid)
+           || (p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write and p->pipe_latch[MEM_LATCH][ii].valid)))
         {
-            p->pipe_latch[ID_LATCH][ii].stall = (p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write and p->pipe_latch[EX_LATCH][ii].valid)
-                                                || (p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write and p->pipe_latch[MEM_LATCH][ii].valid);
+            p->pipe_latch[ID_LATCH][ii].stall = true;
         }
 
-        // Checks to see if there are any needed registers, i.e depedencies
-        else if (p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed) {
+        // If one of the sources is needed, then check to see if the destination is currently being written to.
+        else if ((p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed)) {
 
-            // Checks to see if the dependencies exist in the used registers
+            // Loops through all the elements in the dest_reg. If the source reg address is not in the reg, then
+            //  no need to stall, otherwise stall.
             if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
                 reg_used.end()
                 and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
                     reg_used.end() ) {
 
-                // If it doesn't then add the list to the chart and contiunue
-                if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed) {
-                    reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
-                }
                 p->pipe_latch[ID_LATCH][ii].stall = false;
             } else {
                 p->pipe_latch[ID_LATCH][ii].stall = true;
             }
+            // Stop stalling if none of the source registers are dependent on a dest reg
         } else {
             p->pipe_latch[ID_LATCH][ii].stall = false;
+        }
+
+        // If the dest is needed then add it to the required dests, so that any future read from the register is stalled
+        if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed and !p->pipe_latch[ID_LATCH][ii].stall) {
+            reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
         }
 
             if (ENABLE_MEM_FWD) {
