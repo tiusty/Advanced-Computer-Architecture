@@ -193,26 +193,31 @@ void pipe_cycle_ID(Pipeline *p) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
         }
 
-        // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
-        if(p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and cc_write)
-        {
+        bool out_of_order_stall = false;
+        for (int i = 0; i < ii; i++) {
+            if (p->pipe_latch[ID_LATCH][ii].op_id > p->pipe_latch[ID_LATCH][i].op_id) {
+                out_of_order_stall = true;
+            }
+        }
+        if (out_of_order_stall) {
+            p->pipe_latch[ID_LATCH][ii].stall = true;
+        }
+            // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
+        else if (p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and cc_write) {
             p->pipe_latch[ID_LATCH][ii].stall = true;
         }
 
-        // If one of the sources is needed, then check to see if the destination is currently being written to.
-        else if ((p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed || p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed)) {
+            // If one of the sources is needed, then check to see if the destination is currently being written to.
+        else if ((p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed ||
+                  p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed)) {
 
             // Loops through all the elements in the dest_reg. If the source reg address is not in the reg, then
             //  no need to stall, otherwise stall.
-            if (std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
-                reg_used.end()
-                and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
-                    reg_used.end() ) {
-
-                p->pipe_latch[ID_LATCH][ii].stall = false;
-            } else {
-                p->pipe_latch[ID_LATCH][ii].stall = true;
-            }
+            p->pipe_latch[ID_LATCH][ii].stall = !(
+                    std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
+                    reg_used.end()
+                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
+                reg_used.end());
             // Stop stalling if none of the source registers are dependent on a dest reg
         } else {
             p->pipe_latch[ID_LATCH][ii].stall = false;
@@ -223,15 +228,30 @@ void pipe_cycle_ID(Pipeline *p) {
             reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
         }
 
-            if (ENABLE_MEM_FWD) {
-                // todo
-            }
-
-            if (ENABLE_EXE_FWD) {
-                // todo
-            }
+        if (ENABLE_MEM_FWD) {
+            // todo
         }
 
+        if (ENABLE_EXE_FWD) {
+            // todo
+        }
+    }
+
+    // Sorts the fetch pipe to keep the oldest instruciton in pipe 0
+    Pipeline_Latch temp_pipe;
+    Pipeline_Latch *min_pipe;
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        min_pipe = &p->pipe_latch[ID_LATCH][ii];
+        for (int jj = 0; jj < PIPE_WIDTH; jj++) {
+            if (p->pipe_latch[ID_LATCH][jj].op_id > min_pipe->op_id) {
+                min_pipe = &p->pipe_latch[ID_LATCH][jj];
+            }
+        }
+        temp_pipe = p->pipe_latch[ID_LATCH][ii];
+        p->pipe_latch[ID_LATCH][ii] = *min_pipe;
+        *min_pipe = temp_pipe;
+
+    }
 }
 
 //--------------------------------------------------------------------//
