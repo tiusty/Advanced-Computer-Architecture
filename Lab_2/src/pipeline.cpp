@@ -183,23 +183,36 @@ void pipe_cycle_EX(Pipeline *p){
 }
 
 //--------------------------------------------------------------------//
+void swap(Pipeline_Latch *xp, Pipeline_Latch *yp)
+{
+    Pipeline_Latch temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
 
 void pipe_cycle_ID(Pipeline *p) {
     int ii;
-    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+    bool early_cycle_stall = false;
 
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
         // If the latch is not stalled then pull a new instruction
         if (!p->pipe_latch[ID_LATCH][ii].stall) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
         }
+    }
+// A function to implement bubble sort
+    int i, j;
+    for (i = 0; i < PIPE_WIDTH - 1; i++)
 
-        bool out_of_order_stall = false;
-        for (int i = 0; i < ii; i++) {
-            if (p->pipe_latch[ID_LATCH][ii].op_id > p->pipe_latch[ID_LATCH][i].op_id) {
-                out_of_order_stall = true;
-            }
-        }
-        if (out_of_order_stall) {
+        // Last i elements are already in place
+        for (j = 0; j < PIPE_WIDTH - i - 1; j++)
+            if (p->pipe_latch[ID_LATCH][j].op_id > p->pipe_latch[ID_LATCH][j + 1].op_id)
+                swap(&p->pipe_latch[ID_LATCH][j], &p->pipe_latch[ID_LATCH][j + 1]);
+
+
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+
+        if (early_cycle_stall) {
             p->pipe_latch[ID_LATCH][ii].stall = true;
         }
             // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
@@ -217,7 +230,7 @@ void pipe_cycle_ID(Pipeline *p) {
                     std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
                     reg_used.end()
                     and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
-                reg_used.end());
+                        reg_used.end());
             // Stop stalling if none of the source registers are dependent on a dest reg
         } else {
             p->pipe_latch[ID_LATCH][ii].stall = false;
@@ -235,22 +248,15 @@ void pipe_cycle_ID(Pipeline *p) {
         if (ENABLE_EXE_FWD) {
             // todo
         }
+
+        early_cycle_stall = early_cycle_stall | p->pipe_latch[ID_LATCH][ii].stall;
     }
 
-    // Sorts the fetch pipe to keep the oldest instruciton in pipe 0
-    Pipeline_Latch temp_pipe;
-    Pipeline_Latch *min_pipe;
-    for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        min_pipe = &p->pipe_latch[ID_LATCH][ii];
-        for (int jj = 0; jj < PIPE_WIDTH; jj++) {
-            if (p->pipe_latch[ID_LATCH][jj].op_id > min_pipe->op_id) {
-                min_pipe = &p->pipe_latch[ID_LATCH][jj];
-            }
-        }
-        temp_pipe = p->pipe_latch[ID_LATCH][ii];
-        p->pipe_latch[ID_LATCH][ii] = *min_pipe;
-        *min_pipe = temp_pipe;
 
+    bool stall = false;
+    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        stall = p->pipe_latch[ID_LATCH][ii].stall | stall;
+        p->pipe_latch[ID_LATCH][ii].stall = stall;
     }
 }
 
