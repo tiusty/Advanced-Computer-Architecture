@@ -229,6 +229,24 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
+        // check for dependencies with a older instruction in decode instruction
+        for (int jj=0; jj < ii; jj++)
+        {
+            if(p->pipe_latch[ID_LATCH][jj].valid and p->pipe_latch[ID_LATCH][jj].tr_entry.dest_needed)
+            {
+                if(p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
+                   and (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[ID_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+                else if(p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                        and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg == p->pipe_latch[ID_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+            }
+        }
+
         if(p->pipe_latch[FE_LATCH][ii].tr_entry.cc_read)
         {
             for (int jj=0; jj < PIPE_WIDTH; jj++)
