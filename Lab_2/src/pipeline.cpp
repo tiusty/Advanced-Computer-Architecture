@@ -14,8 +14,6 @@ extern int32_t PIPE_WIDTH;
 extern int32_t ENABLE_MEM_FWD;
 extern int32_t ENABLE_EXE_FWD;
 extern int32_t BPRED_POLICY;
-std::vector<uint8_t> reg_used;
-bool cc_write = false;
 
 /**********************************************************************
  * Support Function: Read 1 Trace Record From File and populate Fetch Op
@@ -116,8 +114,6 @@ void pipe_print_state(Pipeline *p){
 void pipe_cycle(Pipeline *p)
 {
     p->stat_num_cycle++;
-    cc_write = false;
-
     pipe_cycle_WB(p);
     pipe_cycle_MEM(p);
     pipe_cycle_EX(p);
@@ -134,16 +130,7 @@ void pipe_cycle_WB(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
         if (p->pipe_latch[MEM_LATCH][ii].valid) {
-
             p->stat_retired_inst++;
-            if (p->pipe_latch[MEM_LATCH][ii].tr_entry.dest_needed) {
-                std::vector<uint8_t, std::allocator<uint8_t >>::iterator it;
-                it = std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[MEM_LATCH][ii].tr_entry.dest);
-                if (it != reg_used.end()) {
-                    reg_used.erase(it);
-                }
-            }
-
             if (p->pipe_latch[MEM_LATCH][ii].op_id >= p->halt_op_id) {
                 p->halt = true;
             }
@@ -160,7 +147,6 @@ void pipe_cycle_MEM(Pipeline *p){
       if (p->pipe_latch[MEM_LATCH][ii].valid)
       {
           p->pipe_latch[MEM_LATCH][ii]=p->pipe_latch[EX_LATCH][ii];
-          cc_write = cc_write || p->pipe_latch[MEM_LATCH][ii].tr_entry.cc_write;
       }
   }
 }
@@ -174,11 +160,7 @@ void pipe_cycle_EX(Pipeline *p){
       if (p->pipe_latch[EX_LATCH][ii].valid)
       {
           p->pipe_latch[EX_LATCH][ii]=p->pipe_latch[ID_LATCH][ii];
-          cc_write = cc_write || p->pipe_latch[EX_LATCH][ii].tr_entry.cc_write;
       }
-
-      // If the ID latch is marked as not valid because of halting, then finish the last transfer but then
-      // don't transfer anymore until the ID latch is valid again
   }
 }
 
@@ -194,51 +176,73 @@ void pipe_cycle_ID(Pipeline *p) {
     int ii;
     bool early_cycle_stall = false;
 
-    for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        // If the latch is not stalled then pull a new instruction
-        if (!p->pipe_latch[ID_LATCH][ii].stall) {
-            p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
-        }
-    }
 // A function to implement bubble sort
     int i, j;
     for (i = 0; i < PIPE_WIDTH - 1; i++)
-
         // Last i elements are already in place
         for (j = 0; j < PIPE_WIDTH - i - 1; j++)
-            if (p->pipe_latch[ID_LATCH][j].op_id > p->pipe_latch[ID_LATCH][j + 1].op_id)
-                swap(&p->pipe_latch[ID_LATCH][j], &p->pipe_latch[ID_LATCH][j + 1]);
+            if (p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id)
+                swap(&p->pipe_latch[FE_LATCH][j], &p->pipe_latch[FE_LATCH][j + 1]);
 
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
+
+        p->pipe_latch[ID_LATCH][ii].stall = false;
 
         if (early_cycle_stall) {
             p->pipe_latch[ID_LATCH][ii].stall = true;
         }
-            // If there instruction has a cc_read, then make sure there is no cc_write in the MEM or EX stages
-        else if (p->pipe_latch[ID_LATCH][ii].tr_entry.cc_read and cc_write) {
-            p->pipe_latch[ID_LATCH][ii].stall = true;
+
+        // Stall condition for EX stage for data dependency
+        for (int jj=0; jj < PIPE_WIDTH; jj++)
+        {
+            if(p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed)
+            {
+                if(p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
+                    and (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+                else if(p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                   and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+            }
         }
 
-            // If one of the sources is needed, then check to see if the destination is currently being written to.
-        else if ((p->pipe_latch[ID_LATCH][ii].tr_entry.src1_needed ||
-                  p->pipe_latch[ID_LATCH][ii].tr_entry.src2_needed)) {
-
-            // Loops through all the elements in the dest_reg. If the source reg address is not in the reg, then
-            //  no need to stall, otherwise stall.
-            p->pipe_latch[ID_LATCH][ii].stall = !(
-                    std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src1_reg) ==
-                    reg_used.end()
-                    and std::find(reg_used.begin(), reg_used.end(), p->pipe_latch[ID_LATCH]->tr_entry.src2_reg) ==
-                        reg_used.end());
-            // Stop stalling if none of the source registers are dependent on a dest reg
-        } else {
-            p->pipe_latch[ID_LATCH][ii].stall = false;
+        // Data depedency for MEM latch
+        for (int jj=0; jj < PIPE_WIDTH; jj++)
+        {
+            if(p->pipe_latch[MEM_LATCH][jj].valid and p->pipe_latch[MEM_LATCH][jj].tr_entry.dest_needed)
+            {
+                if(p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
+                   and (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[MEM_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+                else if(p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                        and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg == p->pipe_latch[MEM_LATCH][jj].tr_entry.dest))
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+            }
         }
 
-        // If the dest is needed then add it to the required dests, so that any future read from the register is stalled
-        if (p->pipe_latch[ID_LATCH][ii].tr_entry.dest_needed and !p->pipe_latch[ID_LATCH][ii].stall) {
-            reg_used.push_back(p->pipe_latch[ID_LATCH][ii].tr_entry.dest);
+        if(p->pipe_latch[FE_LATCH][ii].tr_entry.cc_read)
+        {
+            for (int jj=0; jj < PIPE_WIDTH; jj++)
+            {
+                if(p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.cc_write)
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+
+                if(p->pipe_latch[MEM_LATCH][jj].valid and p->pipe_latch[MEM_LATCH][jj].tr_entry.cc_write)
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+            }
         }
 
         if (ENABLE_MEM_FWD) {
@@ -249,14 +253,14 @@ void pipe_cycle_ID(Pipeline *p) {
             // todo
         }
 
-        early_cycle_stall = early_cycle_stall | p->pipe_latch[ID_LATCH][ii].stall;
-    }
 
-
-    bool stall = false;
-    for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        stall = p->pipe_latch[ID_LATCH][ii].stall | stall;
-        p->pipe_latch[ID_LATCH][ii].stall = stall;
+        // If the latch is not stalled then pull a new instruction
+        if (!p->pipe_latch[ID_LATCH][ii].stall) {
+            p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
+        } else {
+            p->pipe_latch[ID_LATCH][ii].valid = false;
+        }
+        early_cycle_stall = early_cycle_stall || p->pipe_latch[ID_LATCH][ii].stall;
     }
 }
 
@@ -269,7 +273,7 @@ void pipe_cycle_FE(Pipeline *p) {
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
         // copy the op in FE LATCH
-        if (!p->pipe_latch[FE_LATCH][ii].stall) {
+        if (!p->pipe_latch[ID_LATCH][ii].stall) {
             pipe_get_fetch_op(p, &fetch_op);
 
             if (BPRED_POLICY) {
@@ -279,7 +283,6 @@ void pipe_cycle_FE(Pipeline *p) {
             p->pipe_latch[FE_LATCH][ii] = fetch_op;
 
         }
-        p->pipe_latch[FE_LATCH][ii].stall = p->pipe_latch[ID_LATCH][ii].stall;
 
     }
 }
