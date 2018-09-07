@@ -176,7 +176,7 @@ void pipe_cycle_ID(Pipeline *p) {
     int ii;
     bool early_cycle_stall = false;
 
-// A function to implement bubble sort
+    // A function to implement bubble sort
     int i, j;
     for (i = 0; i < PIPE_WIDTH - 1; i++)
         // Last i elements are already in place
@@ -211,7 +211,7 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
-        // Data depedency for MEM latch
+        // Data dependency for MEM latch
         for (int jj=0; jj < PIPE_WIDTH; jj++)
         {
             if(p->pipe_latch[MEM_LATCH][jj].valid and p->pipe_latch[MEM_LATCH][jj].tr_entry.dest_needed)
@@ -243,7 +243,16 @@ void pipe_cycle_ID(Pipeline *p) {
                     p->pipe_latch[ID_LATCH][ii].stall = true;
                 }
             }
+
+            for (int jj=0; jj < ii; jj++)
+            {
+                if(p->pipe_latch[ID_LATCH][jj].valid and p->pipe_latch[ID_LATCH][jj].tr_entry.cc_write)
+                {
+                    p->pipe_latch[ID_LATCH][ii].stall = true;
+                }
+            }
         }
+
 
         if (ENABLE_MEM_FWD) {
             // todo
@@ -279,11 +288,8 @@ void pipe_cycle_FE(Pipeline *p) {
             if (BPRED_POLICY) {
                 pipe_check_bpred(p, &fetch_op);
             }
-
             p->pipe_latch[FE_LATCH][ii] = fetch_op;
-
         }
-
     }
 }
 
