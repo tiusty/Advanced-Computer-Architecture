@@ -189,6 +189,8 @@ void pipe_cycle_ID(Pipeline *p) {
 
         p->pipe_latch[ID_LATCH][ii].stall = false;
 
+        // If the instruction before this one has a stall in the fetch stage, then stall this one since it is an
+        //  in order pipeline
         if (early_cycle_stall) {
             p->pipe_latch[ID_LATCH][ii].stall = true;
         }
@@ -229,7 +231,7 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
-        // check for dependencies with a older instruction in decode instruction
+        // check for dependencies with instructions that moved to decode stage in this cycle
         for (int jj=0; jj < ii; jj++)
         {
             if(p->pipe_latch[ID_LATCH][jj].valid and p->pipe_latch[ID_LATCH][jj].tr_entry.dest_needed)
@@ -247,8 +249,10 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
+        // Checks for cc_read dependency
         if(p->pipe_latch[FE_LATCH][ii].tr_entry.cc_read)
         {
+            // Checks for the dependency in the EX and MEM stages
             for (int jj=0; jj < PIPE_WIDTH; jj++)
             {
                 if(p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.cc_write)
@@ -262,6 +266,7 @@ void pipe_cycle_ID(Pipeline *p) {
                 }
             }
 
+            // Checks for the dependency instructions that just moved to decode stage in this iteration
             for (int jj=0; jj < ii; jj++)
             {
                 if(p->pipe_latch[ID_LATCH][jj].valid and p->pipe_latch[ID_LATCH][jj].tr_entry.cc_write)
@@ -281,12 +286,14 @@ void pipe_cycle_ID(Pipeline *p) {
         }
 
 
-        // If the latch is not stalled then pull a new instruction
+        // If the latch is not stalled then pull a new instruction. If it is stalled then the latch is no longer valid
         if (!p->pipe_latch[ID_LATCH][ii].stall) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
         } else {
             p->pipe_latch[ID_LATCH][ii].valid = false;
         }
+
+        // If the first pipeline was stalled then all future pipelines in this cycle need to be stalled
         early_cycle_stall = early_cycle_stall || p->pipe_latch[ID_LATCH][ii].stall;
     }
 }
