@@ -196,7 +196,7 @@ void pipe_cycle_ID(Pipeline *p) {
         }
 
         // Stall condition for EX stage for data dependency
-        if(!ENABLE_EXE_FWD and (p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_ALU and p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_LD)) {
+        if(!ENABLE_EXE_FWD || (p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_ALU and p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_LD and p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_OTHER)) {
             for (int jj = 0; jj < PIPE_WIDTH; jj++) {
                 if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed) {
                     if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
@@ -279,16 +279,6 @@ void pipe_cycle_ID(Pipeline *p) {
                 }
             }
         }
-
-
-        if (ENABLE_MEM_FWD) {
-            // todo
-        }
-
-        if (ENABLE_EXE_FWD) {
-            // todo
-        }
-
 
         // If the latch is not stalled then pull a new instruction. If it is stalled then the latch is no longer valid
         if (!p->pipe_latch[ID_LATCH][ii].stall) {
