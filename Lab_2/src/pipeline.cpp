@@ -196,7 +196,21 @@ void pipe_cycle_ID(Pipeline *p) {
         }
 
         // Stall condition for EX stage for data dependency
-        if(!ENABLE_EXE_FWD || (p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_ALU and p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_LD and p->pipe_latch[FE_LATCH][ii].tr_entry.op_type != OP_OTHER)) {
+        if(ENABLE_EXE_FWD) {
+            for (int jj = 0; jj < PIPE_WIDTH; jj++) {
+                if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed) {
+                    if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
+                        and
+                        (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                        p->pipe_latch[ID_LATCH][ii].stall = true;
+                    } else if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                               and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg ==
+                                    p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                        p->pipe_latch[ID_LATCH][ii].stall = true;
+                    }
+                }
+            }
+        } else {
             for (int jj = 0; jj < PIPE_WIDTH; jj++) {
                 if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed) {
                     if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
@@ -220,7 +234,8 @@ void pipe_cycle_ID(Pipeline *p) {
                         and
                         (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[MEM_LATCH][jj].tr_entry.dest)) {
                         p->pipe_latch[ID_LATCH][ii].stall = true;
-                    } else if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                    }
+                    if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
                                and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg ==
                                     p->pipe_latch[MEM_LATCH][jj].tr_entry.dest)) {
                         p->pipe_latch[ID_LATCH][ii].stall = true;
@@ -250,13 +265,23 @@ void pipe_cycle_ID(Pipeline *p) {
         // Checks for cc_read dependency
         if(p->pipe_latch[FE_LATCH][ii].tr_entry.cc_read)
         {
+            bool cc_write_non_load = false;
             // Checks for the dependency in the EX and MEM stages
             for (int jj=0; jj < PIPE_WIDTH; jj++)
             {
-                if(!ENABLE_EXE_FWD || p->pipe_latch[EX_LATCH][jj].tr_entry.op_type == OP_LD) {
+                if(!ENABLE_EXE_FWD) {
 
                     if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.cc_write) {
                         p->pipe_latch[ID_LATCH][ii].stall = true;
+                    }
+                } else {
+                    if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.cc_write) {
+                        if (p->pipe_latch[EX_LATCH][jj].tr_entry.op_type == OP_LD and !cc_write_non_load) {
+                            p->pipe_latch[ID_LATCH][ii].stall = true;
+                        } else {
+                            cc_write_non_load = true;
+                        }
+
                     }
                 }
 
