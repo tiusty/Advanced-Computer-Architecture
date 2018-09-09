@@ -196,7 +196,7 @@ void pipe_cycle_ID(Pipeline *p) {
         }
 
         // Stall condition for EX stage for data dependency
-        if(ENABLE_EXE_FWD) {
+        if(!ENABLE_EXE_FWD) {
             for (int jj = 0; jj < PIPE_WIDTH; jj++) {
                 if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed) {
                     if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
@@ -211,16 +211,32 @@ void pipe_cycle_ID(Pipeline *p) {
                 }
             }
         } else {
+            bool src1_set = false;
+            bool src2_set = false;
             for (int jj = 0; jj < PIPE_WIDTH; jj++) {
                 if (p->pipe_latch[EX_LATCH][jj].valid and p->pipe_latch[EX_LATCH][jj].tr_entry.dest_needed) {
-                    if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
-                        and
-                        (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
-                        p->pipe_latch[ID_LATCH][ii].stall = true;
-                    } else if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
-                               and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg ==
-                                    p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
-                        p->pipe_latch[ID_LATCH][ii].stall = true;
+                    if(p->pipe_latch[EX_LATCH][jj].tr_entry.op_type == OP_LD)
+                    {
+                        if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed and !src1_set
+                            and
+                            (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                            p->pipe_latch[ID_LATCH][ii].stall = true;
+                        } else if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed and !src2_set
+                                   and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg ==
+                                        p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                            p->pipe_latch[ID_LATCH][ii].stall = true;
+                        }
+                    } else {
+                        if (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_needed
+                            and
+                            (p->pipe_latch[FE_LATCH][ii].tr_entry.src1_reg == p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                            src1_set = true;
+                        }
+                        if (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_needed
+                                   and (p->pipe_latch[FE_LATCH][ii].tr_entry.src2_reg ==
+                                        p->pipe_latch[EX_LATCH][jj].tr_entry.dest)) {
+                            src2_set = true;
+                        }
                     }
                 }
             }
