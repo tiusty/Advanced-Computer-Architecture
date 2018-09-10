@@ -119,8 +119,7 @@ void pipe_cycle(Pipeline *p)
     pipe_cycle_EX(p);
     pipe_cycle_ID(p);
     pipe_cycle_FE(p);
-    pipe_print_state(p);
-	    
+
 }
 /**********************************************************************
  * -----------  DO NOT MODIFY THE CODE ABOVE THIS LINE ----------------
