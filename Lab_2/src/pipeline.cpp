@@ -328,7 +328,7 @@ void pipe_cycle_FE(Pipeline *p) {
     bool tr_read_success;
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        if(p->fetch_cbr_stall) {
+        if(p->fetch_cbr_stall and (!p->pipe_latch[ID_LATCH][ii].stall or !p->pipe_latch[FE_LATCH][ii].valid)) {
             p->pipe_latch[FE_LATCH][ii].valid = false;
         } else {
             p->pipe_latch[FE_LATCH][ii].valid = true;
