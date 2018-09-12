@@ -185,7 +185,8 @@ void pipe_cycle_ID(Pipeline *p) {
     for (i = 0; i < PIPE_WIDTH - 1; i++)
         // Last i elements are already in place
         for (j = 0; j < PIPE_WIDTH - i - 1; j++)
-            if ((p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id) and p->pipe_latch[FE_LATCH][j+1].valid)
+            if (((p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id) and p->pipe_latch[FE_LATCH][j+1].valid)
+            || (!p->pipe_latch[FE_LATCH][j].valid and p->pipe_latch[FE_LATCH][j + 1].valid))
                 swap(&p->pipe_latch[FE_LATCH][j], &p->pipe_latch[FE_LATCH][j + 1]);
 
 
