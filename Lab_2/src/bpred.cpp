@@ -23,7 +23,10 @@ bool BPRED::GetPrediction(uint32_t PC){
 /////////////////////////////////////////////////////////////
 
 void  BPRED::UpdatePredictor(uint32_t PC, bool resolveDir, bool predDir) {
-
+    stat_num_branches++;
+    if(resolveDir != predDir) {
+        stat_num_mispred++;
+    }
 
 }
 

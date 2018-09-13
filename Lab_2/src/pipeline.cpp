@@ -119,6 +119,7 @@ void pipe_cycle(Pipeline *p)
     pipe_cycle_EX(p);
     pipe_cycle_ID(p);
     pipe_cycle_FE(p);
+    pipe_print_state(p);
 
 }
 /**********************************************************************
@@ -129,6 +130,10 @@ void pipe_cycle_WB(Pipeline *p) {
     int ii;
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
         if (p->pipe_latch[MEM_LATCH][ii].valid) {
+            if(p->pipe_latch[MEM_LATCH][ii].is_mispred_cbr and p->pipe_latch[MEM_LATCH][ii].tr_entry.op_type == OP_CBR)
+            {
+                p->fetch_cbr_stall = false;
+            }
             p->stat_retired_inst++;
             if (p->pipe_latch[MEM_LATCH][ii].op_id >= p->halt_op_id) {
                 p->halt = true;
@@ -180,7 +185,7 @@ void pipe_cycle_ID(Pipeline *p) {
     for (i = 0; i < PIPE_WIDTH - 1; i++)
         // Last i elements are already in place
         for (j = 0; j < PIPE_WIDTH - i - 1; j++)
-            if (p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id)
+            if ((p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id) and p->pipe_latch[FE_LATCH][j+1].valid)
                 swap(&p->pipe_latch[FE_LATCH][j], &p->pipe_latch[FE_LATCH][j + 1]);
 
 
@@ -299,6 +304,10 @@ void pipe_cycle_ID(Pipeline *p) {
             }
         }
 
+        if(p->fetch_cbr_stall and !p->pipe_latch[FE_LATCH][ii].valid and !p->pipe_latch[FE_LATCH][ii].is_mispred_cbr) {
+            p->pipe_latch[ID_LATCH][ii].stall = true;
+        }
+
         // If the latch is not stalled then pull a new instruction. If it is stalled then the latch is no longer valid
         if (!p->pipe_latch[ID_LATCH][ii].stall) {
             p->pipe_latch[ID_LATCH][ii] = p->pipe_latch[FE_LATCH][ii];
@@ -319,8 +328,14 @@ void pipe_cycle_FE(Pipeline *p) {
     bool tr_read_success;
 
     for (ii = 0; ii < PIPE_WIDTH; ii++) {
+        if(p->fetch_cbr_stall and (!p->pipe_latch[ID_LATCH][ii].stall or !p->pipe_latch[FE_LATCH][ii].valid)) {
+            p->pipe_latch[FE_LATCH][ii].valid = false;
+        } else {
+            p->pipe_latch[FE_LATCH][ii].valid = true;
+        }
+
         // copy the op in FE LATCH
-        if (!p->pipe_latch[ID_LATCH][ii].stall) {
+        if (!p->pipe_latch[ID_LATCH][ii].stall and !p->fetch_cbr_stall) {
             pipe_get_fetch_op(p, &fetch_op);
 
             if (BPRED_POLICY) {
@@ -337,6 +352,14 @@ void pipe_check_bpred(Pipeline *p, Pipeline_Latch *fetch_op){
   // call branch predictor here, if mispred then mark in fetch_op
   // update the predictor instantly
   // stall fetch using the flag p->fetch_cbr_stall
+  if(fetch_op->tr_entry.op_type == OP_CBR) {
+      if(p->b_pred->GetPrediction(static_cast<uint32_t>(fetch_op->tr_entry.inst_addr)) != fetch_op->tr_entry.br_dir)
+      {
+          fetch_op->is_mispred_cbr = true;
+          p->fetch_cbr_stall = true;
+      }
+      p->b_pred->UpdatePredictor(fetch_op->tr_entry.inst_addr, fetch_op->tr_entry.br_dir, p->b_pred->GetPrediction(fetch_op->tr_entry.br_dir));
+  }
 }
 
 

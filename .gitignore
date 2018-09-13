@@ -6,3 +6,15 @@ Lab_2/src/.idea
 
 # ignore swap files
 *.swp
+
+# results folder
+Lab_2/results
+
+# Executables
+Lab_2/src/sim
+
+# tar files
+*.gz
+
+# report files
+Lab_2/scripts/report.txt
