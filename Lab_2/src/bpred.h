@@ -1,12 +1,13 @@
 #ifndef _BPRED_H_
 #define _BPRED_H_
 #include <inttypes.h>
+#include <vector>
 
 
 
 static inline uint32_t SatIncrement(uint32_t x, uint32_t max)
 {
-    if(x < max) 
+    if(x < max)
         return x+1;
     return x;
 }
@@ -34,7 +35,10 @@ class BPRED{
 public:
   uint64_t stat_num_branches;
   uint64_t stat_num_mispred;
-  
+  unsigned int GHR;
+  uint32_t max_counter = 3;
+  uint32_t PHT[4096];
+
 // The interface to the three functions below CAN NOT be changed
     BPRED(uint32_t policy);
     bool GetPrediction(uint32_t PC);  

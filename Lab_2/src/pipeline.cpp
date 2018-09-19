@@ -119,7 +119,7 @@ void pipe_cycle(Pipeline *p)
     pipe_cycle_EX(p);
     pipe_cycle_ID(p);
     pipe_cycle_FE(p);
-    pipe_print_state(p);
+//    pipe_print_state(p);
 
 }
 /**********************************************************************
@@ -185,7 +185,8 @@ void pipe_cycle_ID(Pipeline *p) {
     for (i = 0; i < PIPE_WIDTH - 1; i++)
         // Last i elements are already in place
         for (j = 0; j < PIPE_WIDTH - i - 1; j++)
-            if ((p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id) and p->pipe_latch[FE_LATCH][j+1].valid)
+            if (((p->pipe_latch[FE_LATCH][j].op_id > p->pipe_latch[FE_LATCH][j + 1].op_id) and p->pipe_latch[FE_LATCH][j+1].valid)
+            || (!p->pipe_latch[FE_LATCH][j].valid and p->pipe_latch[FE_LATCH][j + 1].valid))
                 swap(&p->pipe_latch[FE_LATCH][j], &p->pipe_latch[FE_LATCH][j + 1]);
 
 
@@ -353,12 +354,13 @@ void pipe_check_bpred(Pipeline *p, Pipeline_Latch *fetch_op){
   // update the predictor instantly
   // stall fetch using the flag p->fetch_cbr_stall
   if(fetch_op->tr_entry.op_type == OP_CBR) {
-      if(p->b_pred->GetPrediction(static_cast<uint32_t>(fetch_op->tr_entry.inst_addr)) != fetch_op->tr_entry.br_dir)
+      bool pred_path = p->b_pred->GetPrediction(static_cast<uint32_t>(fetch_op->tr_entry.inst_addr));
+      if(pred_path != fetch_op->tr_entry.br_dir)
       {
           fetch_op->is_mispred_cbr = true;
           p->fetch_cbr_stall = true;
       }
-      p->b_pred->UpdatePredictor(fetch_op->tr_entry.inst_addr, fetch_op->tr_entry.br_dir, p->b_pred->GetPrediction(fetch_op->tr_entry.br_dir));
+      p->b_pred->UpdatePredictor(static_cast<uint32_t>(fetch_op->tr_entry.inst_addr), fetch_op->tr_entry.br_dir, pred_path);
   }
 }
 
