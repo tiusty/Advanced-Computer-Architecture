@@ -111,6 +111,17 @@ void ROB_mark_ready(ROB *t, Inst_Info inst) {
 
 bool ROB_check_ready(ROB *t, int tag){
 
+    // Checks to see if the corresponding ROB entry is valid
+    //  and ready
+    if (t->ROB_Entries[tag].valid && t->ROB_Entries[tag].ready)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
 }
 
 
@@ -120,6 +131,16 @@ bool ROB_check_ready(ROB *t, int tag){
 
 bool ROB_check_head(ROB *t){
 
+    // Checks to see if the instruction at the head is ready and valid
+    if(t->ROB_Entries[t->head_ptr].valid && t->ROB_Entries[t->head_ptr].ready)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -127,7 +148,22 @@ bool ROB_check_head(ROB *t){
 /////////////////////////////////////////////////////////////
 
 Inst_Info ROB_remove_head(ROB *t){
-  
+
+    // To remove the oldest entry, mark the entry as not valid and not ready
+    //  and then increment the head prt
+
+    // Store the committed instruction so the value can be returned
+    Inst_Info committed_inst = t->ROB_Entries[t->head_ptr].inst;
+
+    // Mark the entry as not ready and not valid
+    t->ROB_Entries[t->head_ptr].valid = false;
+    t->ROB_Entries[t->head_ptr].ready = false;
+
+    // Increment the head ptr
+    t->head_ptr = (t->head_ptr + 1) % MAX_ROB_ENTRIES;
+
+    // Return the instruction that was committed
+    return committed_inst;
 }
 
 /////////////////////////////////////////////////////////////

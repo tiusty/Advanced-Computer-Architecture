@@ -159,7 +159,7 @@ void  REST_schedule(REST *t, Inst_Info inst){
     {
         //  When the corresponding entry is found then mark
         //  that it has been scheduled
-        if(t->REST_Entries->valid && t->REST_Entries[i].inst.inst_num == inst.inst_num)
+        if(t->REST_Entries[i]->valid && t->REST_Entries[i].inst.inst_num == inst.inst_num)
         {
             t->REST_Entries[i].scheduled = true;
             break;
