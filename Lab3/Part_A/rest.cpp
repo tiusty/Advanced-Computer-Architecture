@@ -49,6 +49,24 @@ void REST_print_state(REST *t){
 
 bool  REST_check_space(REST *t){
 
+    // Checks every entry in the REST table and sees if there is
+    //  an opening. An opening is defined by having a valid
+    //  bit as false
+    for (int i=0; i < MAX_REST_ENTRIES; i++)
+    {
+        // If there is an entry with the valid bit as false
+        //  then an open spot was found
+        if (!t->REST_Entries[i].valid)
+        {
+            return true;
+        }
+    }
+
+    // If the for loop finishes and it couldn't find an entry
+    //  with the valid bit as false, then the scheduler
+    //  is full
+    return false;
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -56,6 +74,21 @@ bool  REST_check_space(REST *t){
 /////////////////////////////////////////////////////////////
 
 void  REST_insert(REST *t, Inst_Info inst){
+
+    // Insert instruction into the index where
+    //  the valid = false entry was found
+    for (int i=0; i < MAX_REST_ENTRIES; i++)
+    {
+        // If an index is found with the valid bit
+        //  as false, then the index is open to be scheduled.
+        // Store the instruction at that index and then break
+        //  the loop
+        if(!t->REST_Entries[i].valid)
+        {
+            t->REST_Entries->inst = inst;
+            break;
+        }
+    }
 
 }
 
@@ -65,6 +98,24 @@ void  REST_insert(REST *t, Inst_Info inst){
 
 void  REST_remove(REST *t, Inst_Info inst){
 
+    // When an instruction finishes execution, then look for
+    //  that instruction in the REST table and remove it by
+    //  marking the valid bit as false
+
+    for (int i=0; i< MAX_REST_ENTRIES; i++)
+    {
+        // When the matching instruction (via the instruction number)
+        //  is found, then mark the valid bit as false to indicate,
+        //  that it is done and being removed from the REST table.
+        // Also mark the entry has not scheduled so when the entry becomes
+        //  valid again, it doesn't try to get scheduled
+        if(t->REST_Entries[i].inst.inst_num == inst.inst_num)
+        {
+            t->REST_Entries[i].scheduled = false;
+            t->REST_Entries[i].valid = false;
+        }
+    }
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -73,6 +124,21 @@ void  REST_remove(REST *t, Inst_Info inst){
 
 void  REST_wakeup(REST *t, int tag){
 
+    // Check all the instructions in the REST table and mark any srcs that
+    //  match the tag as ready
+    for (int i=0; i<MAX_REST_ENTRIES; i++)
+    {
+        if(t->REST_Entries[i].inst.src1_tag != -1 && t->REST_Entries[i].inst.src1_tag == tag)
+        {
+            t->REST_Entries[i].inst.src1_ready = true;
+        }
+
+        if(t->REST_Entries[i].inst.src2_tag != -1 && t->REST_Entries[i].inst.src2_tag == tag)
+        {
+            t->REST_Entries[i].inst.src1_ready = true;
+        }
+    }
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -80,5 +146,18 @@ void  REST_wakeup(REST *t, int tag){
 /////////////////////////////////////////////////////////////
 
 void  REST_schedule(REST *t, Inst_Info inst){
+
+    // If an instruction gets scheduled, find where the instruction
+    //  is stored in the REST table and mark it has scheduled
+    for (int i=0; i<MAX_REST_ENTRIES; i++)
+    {
+        //  When the corresponding entry is found then mark
+        //  that it has been scheduled
+        if(t->REST_Entries[i].inst.inst_num == inst.inst_num)
+        {
+            t->REST_Entries[i].scheduled = true;
+            break;
+        }
+    }
 
 }
