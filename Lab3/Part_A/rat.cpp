@@ -61,7 +61,7 @@ void RAT_set_remap(RAT *t, int arf_id, int prf_id){
     //  arf_id to the new prf_id (which would be a ROB entry)
     //  Make sure to set the valid bit to true because the RAT
     //  entry now corresponds to a PRF
-    t->RAT_Entries[arf_id] = prf_id;
+    t->RAT_Entries[arf_id].prf_id = prf_id;
     t->RAT_Entries[arf_id].valid = true;
 
 }
