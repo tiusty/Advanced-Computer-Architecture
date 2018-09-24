@@ -109,7 +109,7 @@ void  REST_remove(REST *t, Inst_Info inst){
         //  that it is done and being removed from the REST table.
         // Also mark the entry has not scheduled so when the entry becomes
         //  valid again, it doesn't try to get scheduled
-        if(t->REST_Entries[i].inst.inst_num == inst.inst_num)
+        if(t->REST_Entries[i].valid && t->REST_Entries[i].inst.inst_num == inst.inst_num)
         {
             t->REST_Entries[i].scheduled = false;
             t->REST_Entries[i].valid = false;
@@ -128,14 +128,20 @@ void  REST_wakeup(REST *t, int tag){
     //  match the tag as ready
     for (int i=0; i<MAX_REST_ENTRIES; i++)
     {
-        if(t->REST_Entries[i].inst.src1_tag != -1 && t->REST_Entries[i].inst.src1_tag == tag)
+        // If the REST entry is not valid then ignore
+        if(t->REST_Entries[i].valid)
         {
-            t->REST_Entries[i].inst.src1_ready = true;
-        }
+            // If the src1_tag of the instruction matches the tag, then mark it as ready
+            if(t->REST_Entries[i].inst.src1_tag != -1 && t->REST_Entries[i].inst.src1_tag == tag)
+            {
+                t->REST_Entries[i].inst.src1_ready = true;
+            }
 
-        if(t->REST_Entries[i].inst.src2_tag != -1 && t->REST_Entries[i].inst.src2_tag == tag)
-        {
-            t->REST_Entries[i].inst.src1_ready = true;
+            // if the src2_rag of the instruction matches the tag, then mark it as ready
+            if(t->REST_Entries[i].inst.src2_tag != -1 && t->REST_Entries[i].inst.src2_tag == tag)
+            {
+                t->REST_Entries[i].inst.src1_ready = true;
+            }
         }
     }
 
@@ -153,7 +159,7 @@ void  REST_schedule(REST *t, Inst_Info inst){
     {
         //  When the corresponding entry is found then mark
         //  that it has been scheduled
-        if(t->REST_Entries[i].inst.inst_num == inst.inst_num)
+        if(t->REST_Entries->valid && t->REST_Entries[i].inst.inst_num == inst.inst_num)
         {
             t->REST_Entries[i].scheduled = true;
             break;

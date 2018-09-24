@@ -48,6 +48,19 @@ void ROB_print_state(ROB *t){
 
 bool ROB_check_space(ROB *t){
 
+    // Since the ROB is a circular buffer and the tail
+    //  always points to where a new instruction will go
+    //  (i.e to an empty space), the only time that there won't
+    //  be space is when the head == tail cus then the circular
+    //  buffer filled up
+    if(t->tail_ptr == t->head_ptr)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 }
 
 /////////////////////////////////////////////////////////////
@@ -55,7 +68,17 @@ bool ROB_check_space(ROB *t){
 /////////////////////////////////////////////////////////////
 
 int ROB_insert(ROB *t, Inst_Info inst){
-  
+
+    // Inserts an element in the tail
+    t->ROB_Entries[t->tail_ptr].inst = inst;
+
+    // Now mark the entry as valid but not ready
+    t->ROB_Entries[t->tail_ptr].valid = true;
+    t->ROB_Entries[t->tail_ptr].ready = false;
+
+    // need to increment the tail. If the tail is past the number
+    //    of elements, then it will reset back to 0
+    t->tail_ptr = (t->tail_ptr + 1) % MAX_ROB_ENTRIES;
 
 }
 
@@ -63,7 +86,22 @@ int ROB_insert(ROB *t, Inst_Info inst){
 // Once an instruction finishes execution, mark rob entry as done
 /////////////////////////////////////////////////////////////
 
-void ROB_mark_ready(ROB *t, Inst_Info inst){
+void ROB_mark_ready(ROB *t, Inst_Info inst) {
+
+    // Loop through all the elements in the ROB,
+    //  if the entry is valid and the instruction
+    //  numbers match, then mark the entry as done, by
+    //  setting ready = 1
+    for (int i=0; i<MAX_ROB_ENTRIES; i++)
+    {
+        // When the corresponding instruction is found, then mark the instruction as ready to
+        //  indicate that the instruction is done execution
+        if(t->ROB_Entries[i].valid && t->ROB_Entries[i].inst.inst_num == inst.inst_num)
+        {
+            t->ROB_Entries[i].ready = true;
+            break;
+        }
+    }
 
 }
 
