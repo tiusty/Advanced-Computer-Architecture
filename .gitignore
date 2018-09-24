@@ -3,6 +3,7 @@
 
 # Ideal files
 Lab_2/src/.idea
+Lab3/Part_A/.idea
 
 # ignore swap files
 *.swp
@@ -18,3 +19,6 @@ Lab_2/src/sim
 
 # report files
 Lab_2/scripts/report.txt
+
+# Debug files
+Lab_2/src/cmake-build-debug
