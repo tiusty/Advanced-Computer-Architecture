@@ -76,9 +76,14 @@ int ROB_insert(ROB *t, Inst_Info inst){
     t->ROB_Entries[t->tail_ptr].valid = true;
     t->ROB_Entries[t->tail_ptr].ready = false;
 
+    // The int associated with the tail_ptr should be the int associated with the ROB_id
+    int prf_id = t->tail_ptr;
+
     // need to increment the tail. If the tail is past the number
     //    of elements, then it will reset back to 0
     t->tail_ptr = (t->tail_ptr + 1) % MAX_ROB_ENTRIES;
+
+    return prf_id;
 
 }
 
