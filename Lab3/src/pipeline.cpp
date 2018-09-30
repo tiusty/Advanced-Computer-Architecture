@@ -164,6 +164,7 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
+    pipe_print_state(p);
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -322,6 +323,7 @@ void pipe_cycle_rename(Pipeline *p) {
 
                 // When an entry in the REST table exists, then enter that instruction
                 REST_insert(p->pipe_REST, p->ID_latch[ii].inst);
+                p->ID_latch[ii].valid = false;
 
             } else {
                 p->ID_latch[ii].stall = true;
@@ -355,9 +357,11 @@ void pipe_cycle_schedule(Pipeline *p) {
 
             if(found_old_inst)
             {
-                if (oldest_inst.src1_ready and oldest_inst.src2_ready)
+                if (!p->SC_latch[ii].valid and oldest_inst.src1_ready and oldest_inst.src2_ready)
                 {
                     REST_schedule(p->pipe_REST, oldest_inst);
+                    p->SC_latch[ii].inst = oldest_inst;
+                    p->SC_latch[ii].valid = true;
                 }
             }
         }
@@ -374,13 +378,14 @@ void pipe_cycle_schedule(Pipeline *p) {
 //--------------------------------------------------------------------//
 
 void pipe_cycle_broadcast(Pipeline *p) {
-
-    while(EXEQ_check_done(p->pipe_EXEQ))
+    int counter = 0;
+    while(p->EX_latch[counter].valid)
     {
-        Inst_Info removed_inst = EXEQ_remove(p->pipe_EXEQ);
+        Inst_Info removed_inst = p->EX_latch[counter].inst;
         REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
         REST_remove(p->pipe_REST, removed_inst);
         ROB_mark_ready(p->pipe_ROB, removed_inst);
+        counter++;
     }
 }
 
@@ -392,12 +397,14 @@ void pipe_cycle_commit(Pipeline *p) {
 
     if (ROB_check_head(p->pipe_ROB))
     {
+        int robid = p->pipe_ROB->head_ptr;
         Inst_Info commited_inst = ROB_remove_head(p->pipe_ROB);
         int prf_id = RAT_get_remap(p->pipe_RAT, commited_inst.dest_reg);
-        if (prf_id == commited_inst.dr_tag)
+        if (prf_id == robid)
         {
             RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
         }
+        p->stat_retired_inst++;
     }
 }
 

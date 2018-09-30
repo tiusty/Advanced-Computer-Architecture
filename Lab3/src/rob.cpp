@@ -17,7 +17,7 @@ ROB* ROB_init(void){
     t->ROB_Entries[ii].valid=false;
     t->ROB_Entries[ii].ready=false;
   }
-  t->head_ptr=MAX_ROB_ENTRIES;
+  t->head_ptr=0;
   t->tail_ptr=0;
   return t;
 }
@@ -53,7 +53,7 @@ bool ROB_check_space(ROB *t){
     //  (i.e to an empty space), the only time that there won't
     //  be space is when the head == tail cus then the circular
     //  buffer filled up
-    if(t->tail_ptr == t->head_ptr)
+    if(t->tail_ptr == t->head_ptr and t->ROB_Entries[t->head_ptr].valid)
     {
         return false;
     }
