@@ -275,9 +275,13 @@ void pipe_cycle_exe(Pipeline *p) {
 void pipe_cycle_rename(Pipeline *p) {
 
     for (int ii = 1; ii < PIPE_WIDTH; ii++) {
+        // If the srcs need to be remapped, then set the value of the remap.
+        //  If the value does not need to be remapped then it is set to -1
+        p->ID_latch[ii].inst.src1_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src1_reg);
+        p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
+
 
     }
-    // TODO: If src1/src2 is remapped set src1tag, src2tag
     // TODO: Find space in ROB and set drtag as such if successful
     // TODO: Find space in REST and transfer this inst (valid=1, sched=0)
     // TODO: If src1/src2 is not remapped marked as src ready
