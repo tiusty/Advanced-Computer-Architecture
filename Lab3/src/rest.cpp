@@ -85,7 +85,9 @@ void  REST_insert(REST *t, Inst_Info inst){
         //  the loop
         if(!t->REST_Entries[i].valid)
         {
-            t->REST_Entries->inst = inst;
+            t->REST_Entries[i].inst = inst;
+            t->REST_Entries[i].valid = true;
+            t->REST_Entries[i].scheduled = false;
             break;
         }
     }
