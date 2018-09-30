@@ -47,7 +47,7 @@ int  RAT_get_remap(RAT *t, int arf_id){
     }
     else
     {
-        return -1;
+        return RAT_NOT_SET;
     }
 }
 

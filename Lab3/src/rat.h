@@ -4,6 +4,8 @@
 #include <cstdlib>
 #define MAX_ARF_REGS 32
 
+#define RAT_NOT_SET -1
+
 typedef struct RAT_Entry_Struct {
   bool     valid;
   uint64_t prf_id;
