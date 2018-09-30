@@ -17,7 +17,7 @@ ROB* ROB_init(void){
     t->ROB_Entries[ii].valid=false;
     t->ROB_Entries[ii].ready=false;
   }
-  t->head_ptr=0;
+  t->head_ptr=MAX_ROB_ENTRIES;
   t->tail_ptr=0;
   return t;
 }

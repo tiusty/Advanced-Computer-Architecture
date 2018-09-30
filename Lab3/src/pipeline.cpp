@@ -276,46 +276,57 @@ void pipe_cycle_exe(Pipeline *p) {
 
 void pipe_cycle_rename(Pipeline *p) {
 
-    for (int ii = 1; ii < PIPE_WIDTH; ii++) {
+    for (int ii = 0; ii < PIPE_WIDTH; ii++) {
 
         // Checks for space in the ROB and sets the dr_tag if it finds space
-        if (p->ID_latch[ii].inst.dr_tag != -1 and ROB_check_space(p->pipe_ROB))
+        if (p->ID_latch[ii].valid)
         {
-            p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
-        } else {
-            p->ID_latch[ii].stall = true;
-        }
-
-        // If the instruction couldn't get an entry in the ROB then don't try to schedule
-        //  instead stall
-        if (!p->ID_latch[ii].stall and REST_check_space(p->pipe_REST))
-        {
-
-            // If the srcs need to be remapped, then set the value of the remap.
-            //  If the value does not need to be remapped then it is set to -1
-            p->ID_latch[ii].inst.src1_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src1_reg);
-            p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
-
-            // If the src1 tag is either the ARF value or if the ROB entry for the tag is ready, then mark the src as ready
-            if (p->ID_latch[ii].inst.src1_tag == ARF_TAG or ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src1_tag))
+            if (p->ID_latch[ii].inst.dr_tag == -1 and ROB_check_space(p->pipe_ROB))
             {
-                p->ID_latch[ii].inst.src1_ready = true;
+                p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
+            } else {
+                p->ID_latch[ii].stall = true;
             }
 
-            // If the src2 tag is either the ARF value or if the ROB entry for the tag is ready, then mark the src as ready
-            if (p->ID_latch[ii].inst.src2_tag == ARF_TAG or ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src2_tag))
+            // If the instruction couldn't get an entry in the ROB then don't try to schedule
+            //  instead stall
+            if (!p->ID_latch[ii].stall and REST_check_space(p->pipe_REST))
             {
-                p->ID_latch[ii].inst.src2_ready = true;
+
+                // If the srcs need to be remapped, then set the value of the remap.
+                //  If the value does not need to be remapped then it is set to -1
+                if(p->ID_latch[ii].inst.src1_reg != -1)
+                {
+                    p->ID_latch[ii].inst.src1_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src1_reg);
+                }
+
+                if(p->ID_latch[ii].inst.src2_reg != -1)
+                {
+                    p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
+                }
+
+                // If the src1 tag is either the ARF value or if the ROB entry for the tag is ready, then mark the src as ready
+                if (p->ID_latch[ii].inst.src1_reg == -1 or p->ID_latch[ii].inst.src1_tag == ARF_TAG or ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src1_tag))
+                {
+                    p->ID_latch[ii].inst.src1_ready = true;
+                }
+
+                // If the src2 tag is either the ARF value or if the ROB entry for the tag is ready, then mark the src as ready
+                if (p->ID_latch[ii].inst.src2_reg == -1 or p->ID_latch[ii].inst.src2_tag == ARF_TAG or ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src2_tag))
+                {
+                    p->ID_latch[ii].inst.src2_ready = true;
+                }
+
+                // Add the remapped dest into the RAT
+                RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
+
+                // When an entry in the REST table exists, then enter that instruction
+                REST_insert(p->pipe_REST, p->ID_latch[ii].inst);
+
+            } else {
+                p->ID_latch[ii].stall = true;
             }
 
-            // Add the remapped dest into the RAT
-            RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
-
-            // When an entry in the REST table exists, then enter that instruction
-            REST_insert(p->pipe_REST, p->ID_latch[ii].inst);
-
-        } else {
-            p->ID_latch[ii].stall = true;
         }
     }
 }
@@ -356,23 +367,23 @@ void pipe_cycle_broadcast(Pipeline *p) {
 
 
 void pipe_cycle_commit(Pipeline *p) {
-    int ii = 0;
-
-    // TODO: check the head of the ROB. If ready commit (update stats)
-    // TODO: Deallocate entry from ROB
-    // TODO: Update RAT after checking if the mapping is still valid
-
-    // DUMMY CODE (for compiling, and ensuring simulation terminates!)
-    for (ii = 0; ii < PIPE_WIDTH; ii++) {
-        if (p->FE_latch[ii].valid) {
-            if (p->FE_latch[ii].inst.inst_num >= p->halt_inst_num) {
-                p->halt = true;
-            } else {
-                p->stat_retired_inst++;
-                p->FE_latch[ii].valid = false;
-            }
-        }
-    }
+//    int ii = 0;
+//
+//    // TODO: check the head of the ROB. If ready commit (update stats)
+//    // TODO: Deallocate entry from ROB
+//    // TODO: Update RAT after checking if the mapping is still valid
+//
+//    // DUMMY CODE (for compiling, and ensuring simulation terminates!)
+//    for (ii = 0; ii < PIPE_WIDTH; ii++) {
+//        if (p->FE_latch[ii].valid) {
+//            if (p->FE_latch[ii].inst.inst_num >= p->halt_inst_num) {
+//                p->halt = true;
+//            } else {
+//                p->stat_retired_inst++;
+//                p->FE_latch[ii].valid = false;
+//            }
+//        }
+//    }
 }
 
 //--------------------------------------------------------------------//
