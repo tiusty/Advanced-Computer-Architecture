@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 2.6)
+project (lab3)
+set(CMAKE_CXX_STANDARD 11)
+include_directories(trace.h exeq.h  pipeline.h rat.h rest.h rob.h)
+add_executable(Lab3 sim.cpp pipeline.cpp exeq.cpp rat.cpp rob.cpp rest.cpp)
