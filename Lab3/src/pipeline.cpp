@@ -375,11 +375,13 @@ void pipe_cycle_schedule(Pipeline *p) {
 
 void pipe_cycle_broadcast(Pipeline *p) {
 
-    // TODO: Go through all instructions out of EXE latch
-    // TODO: Broadcast it to REST (using wakeup function)
-    // TODO: Remove entry from REST (using inst_num)
-    // TODO: Update the ROB, mark ready, and update Inst Info in ROB
-
+    while(EXEQ_check_done(p->pipe_EXEQ))
+    {
+        Inst_Info removed_inst = EXEQ_remove(p->pipe_EXEQ);
+        REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
+        REST_remove(p->pipe_REST, removed_inst);
+        ROB_mark_ready(p->pipe_ROB, removed_inst);
+    }
 }
 
 
@@ -387,23 +389,16 @@ void pipe_cycle_broadcast(Pipeline *p) {
 
 
 void pipe_cycle_commit(Pipeline *p) {
-//    int ii = 0;
-//
-//    // TODO: check the head of the ROB. If ready commit (update stats)
-//    // TODO: Deallocate entry from ROB
-//    // TODO: Update RAT after checking if the mapping is still valid
-//
-//    // DUMMY CODE (for compiling, and ensuring simulation terminates!)
-//    for (ii = 0; ii < PIPE_WIDTH; ii++) {
-//        if (p->FE_latch[ii].valid) {
-//            if (p->FE_latch[ii].inst.inst_num >= p->halt_inst_num) {
-//                p->halt = true;
-//            } else {
-//                p->stat_retired_inst++;
-//                p->FE_latch[ii].valid = false;
-//            }
-//        }
-//    }
+
+    if (ROB_check_head(p->pipe_ROB))
+    {
+        Inst_Info commited_inst = ROB_remove_head(p->pipe_ROB);
+        int prf_id = RAT_get_remap(p->pipe_RAT, commited_inst.dest_reg);
+        if (prf_id == commited_inst.dr_tag)
+        {
+            RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
+        }
+    }
 }
 
 //--------------------------------------------------------------------//
