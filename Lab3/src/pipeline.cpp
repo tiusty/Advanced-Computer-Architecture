@@ -335,18 +335,38 @@ void pipe_cycle_rename(Pipeline *p) {
 
 void pipe_cycle_schedule(Pipeline *p) {
 
-    // TODO: Implement two scheduling policies (SCHED_POLICY: 0 and 1)
+    for (int ii = 0; ii < PIPE_WIDTH; ii++) {
+        if (SCHED_POLICY == 0) {
+            // inorder scheduling
+            // Find all valid entries, if oldest is stalled then stop
+            // Else send it out and mark it as scheduled
+            Inst_Info oldest_inst = Inst_Info();
+            bool found_old_inst = false;
+            for(int j=0; j<MAX_REST_ENTRIES; j++)
+            {
+                if(!found_old_inst && p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled) {
+                    oldest_inst = p->pipe_REST->REST_Entries[j].inst;
+                    found_old_inst = true;
+                } else if (p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled and p->pipe_REST->REST_Entries[j].inst.inst_num < oldest_inst.inst_num)
+                {
+                    oldest_inst = p->pipe_REST->REST_Entries[j].inst;
+                }
+            }
 
-    if (SCHED_POLICY == 0) {
-        // inorder scheduling
-        // Find all valid entries, if oldest is stalled then stop
-        // Else send it out and mark it as scheduled
-    }
+            if(found_old_inst)
+            {
+                if (oldest_inst.src1_ready and oldest_inst.src2_ready)
+                {
+                    REST_schedule(p->pipe_REST, oldest_inst);
+                }
+            }
+        }
 
-    if (SCHED_POLICY == 1) {
-        // out of order scheduling
-        // Find valid/unscheduled/src1ready/src2ready entries in REST
-        // Transfer them to SC_latch and mark that REST entry as scheduled
+        if (SCHED_POLICY == 1) {
+            // out of order scheduling
+            // Find valid/unscheduled/src1ready/src2ready entries in REST
+            // Transfer them to SC_latch and mark that REST entry as scheduled
+        }
     }
 }
 
