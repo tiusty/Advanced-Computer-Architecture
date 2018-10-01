@@ -164,7 +164,7 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
-    pipe_print_state(p);
+//    pipe_print_state(p);
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -282,11 +282,19 @@ void pipe_cycle_rename(Pipeline *p) {
         // Checks for space in the ROB and sets the dr_tag if it finds space
         if (p->ID_latch[ii].valid)
         {
-            if (p->ID_latch[ii].inst.dr_tag == -1 and ROB_check_space(p->pipe_ROB))
+
+            // Only need to find a ROB entry if the dest reg is required and it doesn't already have a tag
+            if (p->ID_latch[ii].inst.dest_reg != -1 and p->ID_latch[ii].inst.dr_tag == -1)
             {
-                p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
+                //If ti needs a tag and there is no space then stall
+                if (ROB_check_space(p->pipe_ROB))
+                {
+                    p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
+                } else {
+                    p->ID_latch[ii].stall = true;
+                }
             } else {
-                p->ID_latch[ii].stall = true;
+                p->ID_latch[ii].stall = false;
             }
 
             // If the instruction couldn't get an entry in the ROB then don't try to schedule

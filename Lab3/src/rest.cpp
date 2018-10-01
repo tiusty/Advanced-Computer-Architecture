@@ -142,7 +142,7 @@ void  REST_wakeup(REST *t, int tag){
             // if the src2_rag of the instruction matches the tag, then mark it as ready
             if(t->REST_Entries[i].inst.src2_tag != -1 && t->REST_Entries[i].inst.src2_tag == tag)
             {
-                t->REST_Entries[i].inst.src1_ready = true;
+                t->REST_Entries[i].inst.src2_ready = true;
             }
         }
     }
