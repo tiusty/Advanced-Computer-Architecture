@@ -52,7 +52,7 @@ bool  REST_check_space(REST *t){
     // Checks every entry in the REST table and sees if there is
     //  an opening. An opening is defined by having a valid
     //  bit as false
-    for (int i=0; i < MAX_REST_ENTRIES; i++)
+    for (int i=0; i < NUM_REST_ENTRIES; i++)
     {
         // If there is an entry with the valid bit as false
         //  then an open spot was found
@@ -104,7 +104,7 @@ void  REST_remove(REST *t, Inst_Info inst){
     //  that instruction in the REST table and remove it by
     //  marking the valid bit as false
 
-    for (int i=0; i< MAX_REST_ENTRIES; i++)
+    for (int i=0; i< NUM_REST_ENTRIES; i++)
     {
         // When the matching instruction (via the instruction number)
         //  is found, then mark the valid bit as false to indicate,
@@ -128,7 +128,7 @@ void  REST_wakeup(REST *t, int tag){
 
     // Check all the instructions in the REST table and mark any srcs that
     //  match the tag as ready
-    for (int i=0; i<MAX_REST_ENTRIES; i++)
+    for (int i=0; i<NUM_REST_ENTRIES; i++)
     {
         // If the REST entry is not valid then ignore
         if(t->REST_Entries[i].valid)
@@ -157,7 +157,7 @@ void  REST_schedule(REST *t, Inst_Info inst){
 
     // If an instruction gets scheduled, find where the instruction
     //  is stored in the REST table and mark it has scheduled
-    for (int i=0; i<MAX_REST_ENTRIES; i++)
+    for (int i=0; i<NUM_REST_ENTRIES; i++)
     {
         //  When the corresponding entry is found then mark
         //  that it has been scheduled

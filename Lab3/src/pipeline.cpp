@@ -284,7 +284,7 @@ void pipe_cycle_rename(Pipeline *p) {
         {
 
             // Only need to find a ROB entry if the dest reg is required and it doesn't already have a tag
-            if (p->ID_latch[ii].inst.dest_reg != -1 and p->ID_latch[ii].inst.dr_tag == -1)
+            if (p->ID_latch[ii].inst.dr_tag == -1)
             {
                 //If ti needs a tag and there is no space then stall
                 if (ROB_check_space(p->pipe_ROB))
@@ -327,7 +327,10 @@ void pipe_cycle_rename(Pipeline *p) {
                 }
 
                 // Add the remapped dest into the RAT
-                RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
+                if (p->ID_latch[ii].inst.dest_reg != -1 )
+                {
+                    RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
+                }
 
                 // When an entry in the REST table exists, then enter that instruction
                 REST_insert(p->pipe_REST, p->ID_latch[ii].inst);

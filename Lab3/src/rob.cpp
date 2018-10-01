@@ -69,6 +69,9 @@ bool ROB_check_space(ROB *t){
 
 int ROB_insert(ROB *t, Inst_Info inst){
 
+    int prf_id = t->tail_ptr;
+    inst.dr_tag = prf_id;
+
     // Inserts an element in the tail
     t->ROB_Entries[t->tail_ptr].inst = inst;
 
@@ -77,7 +80,6 @@ int ROB_insert(ROB *t, Inst_Info inst){
     t->ROB_Entries[t->tail_ptr].ready = false;
 
     // The int associated with the tail_ptr should be the int associated with the ROB_id
-    int prf_id = t->tail_ptr;
 
     // need to increment the tail. If the tail is past the number
     //    of elements, then it will reset back to 0
