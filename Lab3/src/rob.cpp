@@ -29,7 +29,7 @@ void ROB_print_state(ROB *t){
  int ii = 0;
   printf("Printing ROB \n");
   printf("Entry  Inst   Valid   ready\n");
-  for(ii = 0; ii < 7; ii++) {
+  for(ii = 0; ii < NUM_ROB_ENTRIES; ii++) {
     printf("%5d ::  %d\t", ii, (int)t->ROB_Entries[ii].inst.inst_num);
     printf(" %5d\t", t->ROB_Entries[ii].valid);
     printf(" %5d\n", t->ROB_Entries[ii].ready);
@@ -81,7 +81,7 @@ int ROB_insert(ROB *t, Inst_Info inst){
 
     // need to increment the tail. If the tail is past the number
     //    of elements, then it will reset back to 0
-    t->tail_ptr = (t->tail_ptr + 1) % MAX_ROB_ENTRIES;
+    t->tail_ptr = (t->tail_ptr + 1) % NUM_ROB_ENTRIES;
 
     return prf_id;
 
@@ -97,7 +97,7 @@ void ROB_mark_ready(ROB *t, Inst_Info inst) {
     //  if the entry is valid and the instruction
     //  numbers match, then mark the entry as done, by
     //  setting ready = 1
-    for (int i=0; i<MAX_ROB_ENTRIES; i++)
+    for (int i=0; i<NUM_ROB_ENTRIES; i++)
     {
         // When the corresponding instruction is found, then mark the instruction as ready to
         //  indicate that the instruction is done execution
@@ -165,7 +165,7 @@ Inst_Info ROB_remove_head(ROB *t){
     t->ROB_Entries[t->head_ptr].ready = false;
 
     // Increment the head ptr
-    t->head_ptr = (t->head_ptr + 1) % MAX_ROB_ENTRIES;
+    t->head_ptr = (t->head_ptr + 1) % NUM_ROB_ENTRIES;
 
     // Return the instruction that was committed
     return committed_inst;

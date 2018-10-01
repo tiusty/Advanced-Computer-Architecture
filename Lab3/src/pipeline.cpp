@@ -34,7 +34,7 @@ void pipe_fetch_inst(Pipeline *p, Pipe_Latch *fe_latch) {
         if (bytes_read < sizeof(Trace_Rec)) {
             p->halt_inst_num = p->inst_num_tracker;
             halt_fetch = 1;
-            fe_latch->valid = true;
+            fe_latch->valid = false;
             fe_latch->inst.dest_reg = -1;
             fe_latch->inst.src1_reg = -1;
             fe_latch->inst.src1_reg = -1;
@@ -382,6 +382,7 @@ void pipe_cycle_broadcast(Pipeline *p) {
     while(p->EX_latch[counter].valid)
     {
         Inst_Info removed_inst = p->EX_latch[counter].inst;
+        p->EX_latch[counter].valid = false;
         REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
         REST_remove(p->pipe_REST, removed_inst);
         ROB_mark_ready(p->pipe_ROB, removed_inst);
@@ -405,6 +406,10 @@ void pipe_cycle_commit(Pipeline *p) {
             RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
         }
         p->stat_retired_inst++;
+        if (commited_inst.inst_num >= p->halt_inst_num)
+        {
+            p->halt = true;
+        }
     }
 }
 
