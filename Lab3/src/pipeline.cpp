@@ -165,7 +165,6 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
-//    pipe_print_state(p);
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -382,6 +381,39 @@ void pipe_cycle_schedule(Pipeline *p) {
             // out of order scheduling
             // Find valid/unscheduled/src1ready/src2ready entries in REST
             // Transfer them to SC_latch and mark that REST entry as scheduled
+            Inst_Info oldest_inst = Inst_Info();
+            bool found_old_inst = false;
+            for(int j=0; j<NUM_REST_ENTRIES; j++)
+            {
+                if(!found_old_inst
+                and p->pipe_REST->REST_Entries[j].valid
+                and !p->pipe_REST->REST_Entries[j].scheduled
+                and p->pipe_REST->REST_Entries[j].inst.src1_ready
+                and p->pipe_REST->REST_Entries[j].inst.src2_ready) {
+                    oldest_inst = p->pipe_REST->REST_Entries[j].inst;
+                    found_old_inst = true;
+                }
+                // Gets the oldest instruction that the srcs are ready
+                else if (found_old_inst
+                and p->pipe_REST->REST_Entries[j].valid
+                and !p->pipe_REST->REST_Entries[j].scheduled
+                and p->pipe_REST->REST_Entries[j].inst.inst_num < oldest_inst.inst_num
+                and p->pipe_REST->REST_Entries[j].inst.src1_ready
+                and p->pipe_REST->REST_Entries[j].inst.src2_ready)
+                {
+                    oldest_inst = p->pipe_REST->REST_Entries[j].inst;
+                }
+            }
+
+            if(found_old_inst)
+            {
+                if (!p->SC_latch[ii].valid and oldest_inst.src1_ready and oldest_inst.src2_ready)
+                {
+                    REST_schedule(p->pipe_REST, oldest_inst);
+                    p->SC_latch[ii].inst = oldest_inst;
+                    p->SC_latch[ii].valid = true;
+                }
+            }
         }
     }
 }

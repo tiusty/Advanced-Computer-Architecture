@@ -77,7 +77,7 @@ void  REST_insert(REST *t, Inst_Info inst){
 
     // Insert instruction into the index where
     //  the valid = false entry was found
-    for (int i=0; i < MAX_REST_ENTRIES; i++)
+    for (int i=0; i < NUM_REST_ENTRIES; i++)
     {
         // If an index is found with the valid bit
         //  as false, then the index is open to be scheduled.
