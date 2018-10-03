@@ -17,6 +17,7 @@
 extern int32_t PIPE_WIDTH;
 extern int32_t SCHED_POLICY;
 extern int32_t LOAD_EXE_CYCLES;
+extern int32_t NUM_REST_ENTRIES;
 
 /**********************************************************************
  * Support Function: Read 1 Trace Record From File and populate Fetch Inst
@@ -355,7 +356,7 @@ void pipe_cycle_schedule(Pipeline *p) {
             // Else send it out and mark it as scheduled
             Inst_Info oldest_inst = Inst_Info();
             bool found_old_inst = false;
-            for(int j=0; j<MAX_REST_ENTRIES; j++)
+            for(int j=0; j<NUM_REST_ENTRIES; j++)
             {
                 if(!found_old_inst && p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled) {
                     oldest_inst = p->pipe_REST->REST_Entries[j].inst;
