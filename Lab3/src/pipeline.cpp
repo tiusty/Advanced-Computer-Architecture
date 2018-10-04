@@ -165,6 +165,11 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
+//    if (p->ID_latch[0].inst.inst_num > 9999999)
+//    {
+//    pipe_print_state(p);
+//
+//    }
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -440,21 +445,25 @@ void pipe_cycle_broadcast(Pipeline *p) {
 
 void pipe_cycle_commit(Pipeline *p) {
 
-    if (ROB_check_head(p->pipe_ROB))
+    for (int ii=0; ii < PIPE_WIDTH; ii++)
     {
-        int robid = p->pipe_ROB->head_ptr;
-        Inst_Info commited_inst = ROB_remove_head(p->pipe_ROB);
-        int prf_id = RAT_get_remap(p->pipe_RAT, commited_inst.dest_reg);
-        if (prf_id == robid)
+        if (ROB_check_head(p->pipe_ROB))
         {
-            RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
-        }
-        p->stat_retired_inst++;
-        if (commited_inst.inst_num >= p->halt_inst_num)
-        {
-            p->halt = true;
+            int robid = p->pipe_ROB->head_ptr;
+            Inst_Info commited_inst = ROB_remove_head(p->pipe_ROB);
+            int prf_id = RAT_get_remap(p->pipe_RAT, commited_inst.dest_reg);
+            if (prf_id == robid)
+            {
+                RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
+            }
+            p->stat_retired_inst++;
+            if (commited_inst.inst_num >= p->halt_inst_num)
+            {
+                p->halt = true;
+            }
         }
     }
+
 }
 
 //--------------------------------------------------------------------//
