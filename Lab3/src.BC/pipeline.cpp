@@ -360,7 +360,7 @@ void pipe_cycle_schedule(Pipeline *p) {
             // Else send it out and mark it as scheduled
             Inst_Info oldest_inst = Inst_Info();
             bool found_old_inst = false;
-            for(int j=0; j<NUM_REST_ENTRIES; j++)
+            for(int j=0; j<MAX_REST_ENTRIES; j++)
             {
                 if(!found_old_inst && p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled) {
                     oldest_inst = p->pipe_REST->REST_Entries[j].inst;
@@ -388,7 +388,7 @@ void pipe_cycle_schedule(Pipeline *p) {
             // Transfer them to SC_latch and mark that REST entry as scheduled
             Inst_Info oldest_inst = Inst_Info();
             bool found_old_inst = false;
-            for(int j=0; j<NUM_REST_ENTRIES; j++)
+            for(int j=0; j<MAX_REST_ENTRIES; j++)
             {
                 if(!found_old_inst
                 and p->pipe_REST->REST_Entries[j].valid
