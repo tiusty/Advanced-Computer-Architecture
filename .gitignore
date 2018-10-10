@@ -1,10 +1,12 @@
 # Object files
 *.o
+*.xml
+*.res
 
 # Ideal files
 Lab_2/src/.idea
 Lab3/Part_A/.idea
-Lab3/src/.idea
+Lab3/src.BC/.idea
 
 # ignore swap files
 *.swp
