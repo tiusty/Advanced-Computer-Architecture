@@ -165,11 +165,11 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
-//    if (p->ID_latch[0].inst.inst_num > 9999999)
-//    {
+    if (p->ID_latch[0].inst.inst_num > 14000)
+    {
 //    pipe_print_state(p);
 //
-//    }
+    }
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -279,19 +279,38 @@ void pipe_cycle_exe(Pipeline *p) {
 /**********************************************************************
  * -----------  DO NOT MODIFY THE CODE ABOVE THIS LINE ----------------
  **********************************************************************/
+void swap(Pipe_Latch *xp, Pipe_Latch *yp)
+{
+    Pipe_Latch temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
 
 void pipe_cycle_rename(Pipeline *p) {
+    // A function to implement bubble sort
+    int i, j;
+    for (i = 0; i < PIPE_WIDTH - 1; i++)
+        // Last i elements are already in place
+        for (j = 0; j < PIPE_WIDTH - i - 1; j++)
+            if (((p->ID_latch[j].inst.inst_num > p->ID_latch[j + 1].inst.inst_num) and p->ID_latch[j+1].valid)
+                || (!p->ID_latch[j].valid and p->ID_latch[j + 1].valid))
+                swap(&p->ID_latch[j], &p->ID_latch[j + 1]);
+
+
+    bool last_stall = false;
 
     for (int ii = 0; ii < PIPE_WIDTH; ii++) {
+
+        p->ID_latch[ii].stall = last_stall;
 
         // Checks for space in the ROB and sets the dr_tag if it finds space
         if (p->ID_latch[ii].valid)
         {
 
-            // Only need to find a ROB entry if the dest reg is required and it doesn't already have a tag
+            // Only need to find a ROB entry if it doesn't already have a tag
             if (p->ID_latch[ii].inst.dr_tag == -1)
             {
-                //If ti needs a tag and there is no space then stall
+                //If it needs a tag and there is no space then stall
                 if (ROB_check_space(p->pipe_ROB))
                 {
                     p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
@@ -344,6 +363,8 @@ void pipe_cycle_rename(Pipeline *p) {
             } else {
                 p->ID_latch[ii].stall = true;
             }
+
+            last_stall = p->ID_latch[ii].stall;
 
         }
     }
@@ -428,14 +449,17 @@ void pipe_cycle_schedule(Pipeline *p) {
 
 void pipe_cycle_broadcast(Pipeline *p) {
     int counter = 0;
-    while(p->EX_latch[counter].valid)
+    for(int i=0; i<MAX_BROADCASTS; i++)
     {
-        Inst_Info removed_inst = p->EX_latch[counter].inst;
-        p->EX_latch[counter].valid = false;
-        REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
-        REST_remove(p->pipe_REST, removed_inst);
-        ROB_mark_ready(p->pipe_ROB, removed_inst);
-        counter++;
+        if(p->EX_latch[i].valid)
+        {
+            Inst_Info removed_inst = p->EX_latch[counter].inst;
+            p->EX_latch[counter].valid = false;
+            REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
+            REST_remove(p->pipe_REST, removed_inst);
+            ROB_mark_ready(p->pipe_ROB, removed_inst);
+            counter++;
+        }
     }
 }
 
