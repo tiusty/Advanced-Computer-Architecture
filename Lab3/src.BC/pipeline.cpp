@@ -321,6 +321,12 @@ void pipe_cycle_rename(Pipeline *p) {
                     p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
                 }
 
+                // Add the remapped dest into the RAT
+                if (p->ID_latch[ii].inst.dest_reg != -1 )
+                {
+                    RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
+                }
+
                 // If the src1 tag is either the ARF value or if the ROB entry for the tag is ready, then mark the src as ready
                 if (p->ID_latch[ii].inst.src1_reg == -1 or p->ID_latch[ii].inst.src1_tag == ARF_TAG or ROB_check_ready(p->pipe_ROB, p->ID_latch[ii].inst.src1_tag))
                 {
@@ -333,11 +339,6 @@ void pipe_cycle_rename(Pipeline *p) {
                     p->ID_latch[ii].inst.src2_ready = true;
                 }
 
-                // Add the remapped dest into the RAT
-                if (p->ID_latch[ii].inst.dest_reg != -1 )
-                {
-                    RAT_set_remap(p->pipe_RAT, p->ID_latch[ii].inst.dest_reg, p->ID_latch[ii].inst.dr_tag);
-                }
 
                 // When an entry in the REST table exists, then enter that instruction
                 REST_insert(p->pipe_REST, p->ID_latch[ii].inst);
@@ -437,17 +438,15 @@ void pipe_cycle_schedule(Pipeline *p) {
 //--------------------------------------------------------------------//
 
 void pipe_cycle_broadcast(Pipeline *p) {
-    int counter = 0;
     for(int i=0; i<MAX_BROADCASTS; i++)
     {
         if(p->EX_latch[i].valid)
         {
-            Inst_Info removed_inst = p->EX_latch[counter].inst;
-            p->EX_latch[counter].valid = false;
+            Inst_Info removed_inst = p->EX_latch[i].inst;
+            p->EX_latch[i].valid = false;
             REST_wakeup(p->pipe_REST, removed_inst.dr_tag);
             REST_remove(p->pipe_REST, removed_inst);
             ROB_mark_ready(p->pipe_ROB, removed_inst);
-            counter++;
         }
     }
 }
@@ -462,10 +461,9 @@ void pipe_cycle_commit(Pipeline *p) {
     {
         if (ROB_check_head(p->pipe_ROB))
         {
-            int robid = p->pipe_ROB->head_ptr;
             Inst_Info commited_inst = ROB_remove_head(p->pipe_ROB);
             int prf_id = RAT_get_remap(p->pipe_RAT, commited_inst.dest_reg);
-            if (prf_id == robid)
+            if (prf_id == commited_inst.dr_tag)
             {
                 RAT_reset_entry(p->pipe_RAT, commited_inst.dest_reg);
             }
