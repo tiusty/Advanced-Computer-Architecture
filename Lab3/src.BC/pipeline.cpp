@@ -165,11 +165,11 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
-//    if (p->ID_latch[0].inst.inst_num > 17285)
-//    {
+    if (p->ID_latch[0].inst.inst_num > 300)
+    {
 //    pipe_print_state(p);
 
-//    }
+    }
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -308,7 +308,6 @@ void pipe_cycle_rename(Pipeline *p) {
         {
             if(ROB_check_space(p->pipe_ROB) and REST_check_space(p->pipe_REST))
             {
-                p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
                 // If the srcs need to be remapped, then set the value of the remap.
                 //  If the value does not need to be remapped then it is set to -1
                 if(p->ID_latch[ii].inst.src1_reg != -1)
@@ -320,6 +319,8 @@ void pipe_cycle_rename(Pipeline *p) {
                 {
                     p->ID_latch[ii].inst.src2_tag = RAT_get_remap(p->pipe_RAT, p->ID_latch[ii].inst.src2_reg);
                 }
+
+                p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
 
                 // Add the remapped dest into the RAT
                 if (p->ID_latch[ii].inst.dest_reg != -1 )
