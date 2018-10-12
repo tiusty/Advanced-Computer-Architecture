@@ -165,11 +165,11 @@ void pipe_print_state(Pipeline *p) {
 
 void pipe_cycle(Pipeline *p) {
     p->stat_num_cycle++;
-    if (p->ID_latch[0].inst.inst_num > 14000)
-    {
+//    if (p->ID_latch[0].inst.inst_num > 17285)
+//    {
 //    pipe_print_state(p);
-//
-    }
+
+//    }
 
     pipe_cycle_commit(p);
     pipe_cycle_broadcast(p);
@@ -304,28 +304,11 @@ void pipe_cycle_rename(Pipeline *p) {
         p->ID_latch[ii].stall = last_stall;
 
         // Checks for space in the ROB and sets the dr_tag if it finds space
-        if (p->ID_latch[ii].valid)
+        if (p->ID_latch[ii].valid and !p->ID_latch[ii].stall)
         {
-
-            // Only need to find a ROB entry if it doesn't already have a tag
-            if (p->ID_latch[ii].inst.dr_tag == -1)
+            if(ROB_check_space(p->pipe_ROB) and REST_check_space(p->pipe_REST))
             {
-                //If it needs a tag and there is no space then stall
-                if (ROB_check_space(p->pipe_ROB))
-                {
-                    p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
-                } else {
-                    p->ID_latch[ii].stall = true;
-                }
-            } else {
-                p->ID_latch[ii].stall = false;
-            }
-
-            // If the instruction couldn't get an entry in the ROB then don't try to schedule
-            //  instead stall
-            if (!p->ID_latch[ii].stall and REST_check_space(p->pipe_REST))
-            {
-
+                p->ID_latch[ii].inst.dr_tag = ROB_insert(p->pipe_ROB, p->ID_latch[ii].inst);
                 // If the srcs need to be remapped, then set the value of the remap.
                 //  If the value does not need to be remapped then it is set to -1
                 if(p->ID_latch[ii].inst.src1_reg != -1)
@@ -364,6 +347,7 @@ void pipe_cycle_rename(Pipeline *p) {
                 p->ID_latch[ii].stall = true;
             }
 
+
             last_stall = p->ID_latch[ii].stall;
 
         }
@@ -383,10 +367,13 @@ void pipe_cycle_schedule(Pipeline *p) {
             bool found_old_inst = false;
             for(int j=0; j<MAX_REST_ENTRIES; j++)
             {
-                if(!found_old_inst && p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled) {
+                if(!found_old_inst && p->pipe_REST->REST_Entries[j].valid
+                and !p->pipe_REST->REST_Entries[j].scheduled) {
                     oldest_inst = p->pipe_REST->REST_Entries[j].inst;
                     found_old_inst = true;
-                } else if (p->pipe_REST->REST_Entries[j].valid and !p->pipe_REST->REST_Entries[j].scheduled and p->pipe_REST->REST_Entries[j].inst.inst_num < oldest_inst.inst_num)
+                } else if (p->pipe_REST->REST_Entries[j].valid
+                and !p->pipe_REST->REST_Entries[j].scheduled
+                and p->pipe_REST->REST_Entries[j].inst.inst_num < oldest_inst.inst_num)
                 {
                     oldest_inst = p->pipe_REST->REST_Entries[j].inst;
                 }
@@ -433,7 +420,9 @@ void pipe_cycle_schedule(Pipeline *p) {
 
             if(found_old_inst)
             {
-                if (!p->SC_latch[ii].valid and oldest_inst.src1_ready and oldest_inst.src2_ready)
+                if (!p->SC_latch[ii].valid
+                and oldest_inst.src1_ready
+                and oldest_inst.src2_ready)
                 {
                     REST_schedule(p->pipe_REST, oldest_inst);
                     p->SC_latch[ii].inst = oldest_inst;
