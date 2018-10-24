@@ -130,6 +130,7 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
     uns index = (uns) (lineaddr & index_mask);
     uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
     // make sure to set last access time
+//    cache_find_victim(c, )
   // Find victim using cache_find_victim
   // Initialize the evicted entry
   // Initialize the victime entry
@@ -146,32 +147,30 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
   uns last_access_time;
 
   // TODO: Write this using a switch case statement
-  for(int i=0; i<c->num_ways; i++)
-  {
-      if (!c->sets->line[i].valid)
-      {
+  for(int i=0; i<c->num_ways; i++) {
+      if (!c->sets->line[i].valid) {
           return (uns) i;
       }
-      else
-      {
-          switch (REPL_POLICY)
-          {
-              case 0: //LRU
-                    last_access_time = c->sets->line[0].last_access_time;
-                    for(int j=0; j<c->num_ways; j++)
-                    {
-                        if (c->sets->line[j].last_access_time < last_access_time)
-                        {
-                            last_access_time = c->sets->line[j].last_access_time;
-                        }
-                    }
-                    return last_access_time;
-              case 1: //RAND
-                    return cycle % c->num_ways;
-                  break;
-              default:break;
-          }
-      }
+  }
+
+  switch (REPL_POLICY)
+  {
+      case 0: //LRU
+            // since this will only occur if all the cache lines are valid, then we just take the first valid line
+            //  as the last_access_time (we don't have to worry about getting non-valid line)
+            last_access_time = c->sets->line[0].last_access_time;
+            for(int j=0; j<c->num_ways; j++)
+            {
+                if (c->sets->line[j].last_access_time < last_access_time)
+                {
+                    last_access_time = c->sets->line[j].last_access_time;
+                    victim = j;
+                }
+            }
+            break;
+      case 1: //RAND
+            return cycle % c->num_ways;
+      default:break;
   }
 
   return victim;
