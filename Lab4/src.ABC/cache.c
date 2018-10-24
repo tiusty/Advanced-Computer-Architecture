@@ -102,19 +102,20 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   uns index = (uns) (lineaddr & index_mask);
   uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
 
-  if (c->sets->line[index].valid && c->sets->line[index].tag == tag)
+  for(int i = 0; i<c->num_ways; i++)
   {
-      outcome=HIT;
-      // Only need to set dirty bit on cache write?
-      if (is_write)
+      if (c->sets[index].line[i].tag == tag)
       {
-          c->sets->line[index].dirty = TRUE;
+          outcome = HIT;
+
+          if (is_write)
+          {
+              c->sets[index].line[i].dirty = TRUE;
+          }
+
+          c->sets[index].line[i].last_access_time = (uns) cycle;
+          break;
       }
-      c->sets->line[index].last_access_time = (uns) cycle;
-  }
-  else
-  {
-      outcome = MISS;
   }
 
   return outcome;
@@ -133,10 +134,18 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
     uns index = (uns) (lineaddr & index_mask);
     uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
     // make sure to set last access time
-//    cache_find_victim(c, )
+    uns victim = cache_find_victim(c, index, core_id);
   // Find victim using cache_find_victim
-  // Initialize the evicted entry
-  // Initialize the victime entry
+  c->last_evicted_line = c->sets[index].line[victim];
+  c->sets[index].line[victim].last_access_time = (uns) cycle;
+  c->sets[index].line[victim].tag = tag;
+  c->sets[index].line[victim].valid = TRUE;
+  c->sets[index].line[victim].core_id = core_id;
+  if (is_write) {
+      c->sets[index].line[victim].dirty = TRUE;
+  } else {
+      c->sets[index].line[victim].dirty = FALSE;
+  }
 
 }
 
@@ -151,7 +160,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
 
   // TODO: Write this using a switch case statement
   for(int i=0; i<c->num_ways; i++) {
-      if (!c->sets->line[i].valid) {
+      if (!c->sets[set_index].line[i].valid) {
           return (uns) i;
       }
   }
@@ -161,12 +170,12 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
       case 0: //LRU
             // since this will only occur if all the cache lines are valid, then we just take the first valid line
             //  as the last_access_time (we don't have to worry about getting non-valid line)
-            last_access_time = c->sets->line[0].last_access_time;
+            last_access_time = c->sets[set_index].line[0].last_access_time;
             for(uns j=0; j<c->num_ways; j++)
             {
-                if (c->sets->line[j].last_access_time < last_access_time)
+                if (c->sets[set_index].line[j].last_access_time < last_access_time)
                 {
-                    last_access_time = c->sets->line[j].last_access_time;
+                    last_access_time = c->sets[set_index].line[j].last_access_time;
                     victim = j;
                 }
             }
