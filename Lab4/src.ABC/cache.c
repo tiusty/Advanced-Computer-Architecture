@@ -6,6 +6,7 @@
 
 
 extern uns64 cycle; // You can use this as timestamp for LRU
+extern uns64 CACHE_LINESIZE;
 
 ////////////////////////////////////////////////////////////////////
 // ------------- DO NOT MODIFY THE INIT FUNCTION -----------
@@ -65,11 +66,56 @@ void    cache_print_stats    (Cache *c, char *header){
 // Update appropriate stats
 ////////////////////////////////////////////////////////////////////
 
+int power_2(int number)
+{
+    int power = -1;
+    int value = 1;
+    while(value < number)
+    {
+        value = 1;
+        power += 1;
+        for(int i=0; i<power; i++)
+        {
+            value = value *2;
+        }
+    }
+    return power;
+}
+
+unsigned createMask(unsigned a, unsigned b)
+{
+    unsigned r = 0;
+    for (unsigned i=a; i<=b; i++)
+        r |= 1 << i;
+
+    return r;
+}
+
 Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   Flag outcome=MISS;
 
   // Your Code Goes Here
-  
+
+  //check to see if line is in the cache
+  uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_ways)-1);
+  uns index = lineaddr & index_mask;
+  uns tag = (lineaddr/(CACHE_LINESIZE))/c->num_ways;
+
+  //if it is then
+  //    HIT
+  //if not
+  //    outcome is a miss
+  //    install address into cache
+  if (c->sets->line[index].valid && c->sets->line[index].tag == tag)
+  {
+      outcome=HIT;
+  }
+  else
+  {
+      outcome = MISS;
+      cache_install(c, lineaddr, is_write, core_id);
+  }
+
   return outcome;
 }
 
@@ -85,6 +131,8 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   // Find victim using cache_find_victim
   // Initialize the evicted entry
   // Initialize the victime entry
+
+  //Note: The tag is divided by linesize, then based on number of sets the index is set, then the tag is the remaining bits
  
 }
 
