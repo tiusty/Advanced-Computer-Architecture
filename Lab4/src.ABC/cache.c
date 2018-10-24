@@ -7,6 +7,7 @@
 
 extern uns64 cycle; // You can use this as timestamp for LRU
 extern uns64 CACHE_LINESIZE;
+extern uns64 REPL_POLICY; // 0:LRU 1:RAND
 
 ////////////////////////////////////////////////////////////////////
 // ------------- DO NOT MODIFY THE INIT FUNCTION -----------
@@ -101,19 +102,16 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   uns index = (uns) (lineaddr & index_mask);
   uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
 
-  //if it is then
-  //    HIT
-  //if not
-  //    outcome is a miss
-  //    install address into cache
   if (c->sets->line[index].valid && c->sets->line[index].tag == tag)
   {
       outcome=HIT;
+      // Only need to set dirty bit on cache write?
+      c->sets->line[index].dirty = TRUE;
+      c->sets->line[index].last_access_time = cycle;
   }
   else
   {
       outcome = MISS;
-      cache_install(c, lineaddr, is_write, core_id);
   }
 
   return outcome;
@@ -128,12 +126,14 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   // Your Code Goes Here
+    uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_ways)-1);
+    uns index = (uns) (lineaddr & index_mask);
+    uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
+    // make sure to set last access time
   // Find victim using cache_find_victim
   // Initialize the evicted entry
   // Initialize the victime entry
 
-  //Note: The tag is divided by linesize, then based on number of sets the index is set, then the tag is the remaining bits
- 
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -143,9 +143,37 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
 uns cache_find_victim(Cache *c, uns set_index, uns core_id){
   uns victim=0;
+  uns last_access_time;
 
   // TODO: Write this using a switch case statement
-  
+  for(int i=0; i<c->num_ways; i++)
+  {
+      if (!c->sets->line[i].valid)
+      {
+          return (uns) i;
+      }
+      else
+      {
+          switch (REPL_POLICY)
+          {
+              case 0: //LRU
+                    last_access_time = c->sets->line[0].last_access_time;
+                    for(int j=0; j<c->num_ways; j++)
+                    {
+                        if (c->sets->line[j].last_access_time < last_access_time)
+                        {
+                            last_access_time = c->sets->line[j].last_access_time;
+                        }
+                    }
+                    return last_access_time;
+              case 1: //RAND
+                    return cycle % c->num_ways;
+                  break;
+              default:break;
+          }
+      }
+  }
+
   return victim;
 }
 
