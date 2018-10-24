@@ -99,7 +99,7 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   //check to see if line is in the cache
   uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_ways)-1);
-  uns index = (uns) (lineaddr & index_mask);
+  uns index = (uns) (lineaddr & index_mask)/CACHE_LINESIZE;
   uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
 
   for(int i = 0; i<c->num_ways; i++)
@@ -107,6 +107,7 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
       if (c->sets[index].line[i].tag == tag)
       {
           outcome = HIT;
+
 
           if (is_write)
           {
@@ -117,6 +118,22 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
           break;
       }
   }
+
+    if (is_write)
+    {
+        c->stat_write_access += 1;
+        if (outcome == MISS)
+        {
+            c->stat_write_miss += 1;
+        }
+    } else {
+        c->stat_read_access += 1;
+
+        if (outcome == MISS)
+        {
+            c->stat_read_miss += 1;
+        }
+    }
 
   return outcome;
 }
@@ -131,7 +148,7 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   // Your Code Goes Here
     uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_ways)-1);
-    uns index = (uns) (lineaddr & index_mask);
+    uns index = (uns) (lineaddr & index_mask)/CACHE_LINESIZE;
     uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
     // make sure to set last access time
     uns victim = cache_find_victim(c, index, core_id);
