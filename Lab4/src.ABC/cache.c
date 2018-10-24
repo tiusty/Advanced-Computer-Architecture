@@ -106,8 +106,11 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   {
       outcome=HIT;
       // Only need to set dirty bit on cache write?
-      c->sets->line[index].dirty = TRUE;
-      c->sets->line[index].last_access_time = cycle;
+      if (is_write)
+      {
+          c->sets->line[index].dirty = TRUE;
+      }
+      c->sets->line[index].last_access_time = (uns) cycle;
   }
   else
   {
@@ -159,7 +162,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             // since this will only occur if all the cache lines are valid, then we just take the first valid line
             //  as the last_access_time (we don't have to worry about getting non-valid line)
             last_access_time = c->sets->line[0].last_access_time;
-            for(int j=0; j<c->num_ways; j++)
+            for(uns j=0; j<c->num_ways; j++)
             {
                 if (c->sets->line[j].last_access_time < last_access_time)
                 {
@@ -169,7 +172,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             }
             break;
       case 1: //RAND
-            return cycle % c->num_ways;
+            return (uns) (cycle % c->num_ways);
       default:break;
   }
 
