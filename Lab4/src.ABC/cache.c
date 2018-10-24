@@ -66,7 +66,7 @@ void    cache_print_stats    (Cache *c, char *header){
 // Update appropriate stats
 ////////////////////////////////////////////////////////////////////
 
-int power_2(int number)
+unsigned int power_2(uns64 number)
 {
     int power = -1;
     int value = 1;
@@ -98,8 +98,8 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   //check to see if line is in the cache
   uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_ways)-1);
-  uns index = lineaddr & index_mask;
-  uns tag = (lineaddr/(CACHE_LINESIZE))/c->num_ways;
+  uns index = (uns) (lineaddr & index_mask);
+  uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_ways);
 
   //if it is then
   //    HIT
