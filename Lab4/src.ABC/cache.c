@@ -203,7 +203,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             }
             break;
       case 1: //RAND
-            return (uns) (cycle % c->num_ways);
+            return (uns) (rand() % c->num_ways);
       default:break;
   }
 

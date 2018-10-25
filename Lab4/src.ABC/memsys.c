@@ -166,6 +166,30 @@ uns64 memsys_access_modeA(Memsys *sys, Addr lineaddr, Access_Type type, uns core
 ////////////////////////////////////////////////////////////////////
 // --------------- DO NOT CHANGE THE CODE ABOVE THIS LINE ----------
 ////////////////////////////////////////////////////////////////////
+unsigned int power_2_2(uns64 number)
+{
+  int power = -1;
+  int value = 1;
+  while(value < number)
+  {
+    value = 1;
+    power += 1;
+    for(int i=0; i<power; i++)
+    {
+      value = value *2;
+    }
+  }
+  return power;
+}
+
+unsigned createMask_2(unsigned a, unsigned b)
+{
+  unsigned r = 0;
+  for (unsigned i=a; i<=b; i++)
+    r |= 1 << i;
+
+  return r;
+}
 
 uns64 memsys_access_modeBC(Memsys *sys, Addr lineaddr, Access_Type type,uns core_id){
   uns64 delay=0;
@@ -177,32 +201,68 @@ uns64 memsys_access_modeBC(Memsys *sys, Addr lineaddr, Access_Type type,uns core
       delay += ICACHE_HIT_LATENCY;
       if (outcome == MISS)
       {
-          cache_install(sys->icache, lineaddr, FALSE, core_id);
           delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+          cache_install(sys->icache, lineaddr, FALSE, core_id);
       }
   }
     
 
   if(type == ACCESS_TYPE_LOAD){
-    // YOU NEED TO WRITE THIS PART AND UPDATE DELAY
+    // Check out come of L1 access
     outcome = cache_access(sys->dcache, lineaddr, FALSE, core_id);
     delay += DCACHE_HIT_LATENCY;
+
+    // If L1 access is a MISS then check L2
     if (outcome == MISS)
     {
-      cache_install(sys->dcache, lineaddr, FALSE, core_id);
+      // Checks L2 and returns delay.
       delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+
+      // Since miss in L1, install cache to L1
+      cache_install(sys->dcache, lineaddr, FALSE, core_id);
+
+      // Only write back the evicted line if it is valid and the line is dirty
+      if (sys->dcache->last_evicted_line.valid && sys->dcache->last_evicted_line.dirty)
+      {
+        // Generate the evicted line address
+        uns index_mask = createMask_2(0, power_2_2(sys->dcache->num_sets)-1);
+        uns index = (uns) (lineaddr & index_mask);
+        uns evicted_address = sys->dcache->last_evicted_line.tag << power_2_2(sys->dcache->num_sets);
+        evicted_address = evicted_address | index;
+
+        // Write the evicted line address back to L2
+        memsys_L2_access(sys, evicted_address, TRUE, core_id);
+      }
     }
   }
   
 
   if(type == ACCESS_TYPE_STORE){
-    // YOU NEED TO WRITE THIS PART AND UPDATE DELAY
+    // Check out come of L1 access
     outcome = cache_access(sys->dcache, lineaddr, TRUE, core_id);
     delay += DCACHE_HIT_LATENCY;
+
+    // If L1 access is a MISS then check L2
     if (outcome == MISS)
     {
+      // Checks L2 and returns delay.
+      delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+
+      // Since miss in L1, install cache to L1
       cache_install(sys->dcache, lineaddr, TRUE, core_id);
-      delay += memsys_L2_access(sys, lineaddr, TRUE, core_id);
+
+      // Only write back the evicted line if it is valid and the line is dirty
+      if (sys->dcache->last_evicted_line.valid && sys->dcache->last_evicted_line.dirty)
+      {
+        // Generate the evicted line address
+        uns index_mask = createMask_2(0, power_2_2(sys->dcache->num_sets)-1);
+        uns index = (uns) (lineaddr & index_mask);
+        uns evicted_address = sys->dcache->last_evicted_line.tag << power_2_2(sys->dcache->num_sets);
+        evicted_address = evicted_address | index;
+
+        // Write the evicted line address back to L2
+        memsys_L2_access(sys, evicted_address, TRUE, core_id);
+      }
     }
   }
  
@@ -226,6 +286,16 @@ uns64   memsys_L2_access(Memsys *sys, Addr lineaddr, Flag is_writeback, uns core
   if (outcome == MISS)
   {
     delay += dram_access(sys->dram, lineaddr, FALSE);
+  }
+
+  // Write backs perform off the critical path and therefore do not accumulate delays
+  if (is_writeback)
+  {
+    cache_install(sys->l2cache, lineaddr, TRUE, core_id);
+    if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
+    {
+      dram_access(sys->dram, lineaddr, TRUE);
+    }
   }
 
   return delay;
