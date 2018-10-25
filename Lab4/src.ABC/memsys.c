@@ -218,7 +218,7 @@ uns64 memsys_access_modeBC(Memsys *sys, Addr lineaddr, Access_Type type,uns core
       // Checks L2 and returns delay.
       delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
 
-      // Since miss in L1, install cache to L1
+      // Since miss in L1, install cache to L1 and L2
       cache_install(sys->dcache, lineaddr, FALSE, core_id);
 
       // Only write back the evicted line if it is valid and the line is dirty
@@ -248,7 +248,7 @@ uns64 memsys_access_modeBC(Memsys *sys, Addr lineaddr, Access_Type type,uns core
       // Checks L2 and returns delay.
       delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
 
-      // Since miss in L1, install cache to L1
+      // Since miss in L1, install cache to L1 and L2
       cache_install(sys->dcache, lineaddr, TRUE, core_id);
 
       // Only write back the evicted line if it is valid and the line is dirty
@@ -282,19 +282,24 @@ uns64   memsys_L2_access(Memsys *sys, Addr lineaddr, Flag is_writeback, uns core
   //To get the delay of L2 MISS, you must use the dram_access() function
   //To perform writebacks to memory, you must use the dram_access() function
   //This will help us track your memory reads and memory writes
-  outcome = cache_access(sys->l2cache, lineaddr, FALSE, core_id);
-  if (outcome == MISS)
-  {
-    delay += dram_access(sys->dram, lineaddr, FALSE);
-  }
 
   // Write backs perform off the critical path and therefore do not accumulate delays
   if (is_writeback)
   {
-    cache_install(sys->l2cache, lineaddr, TRUE, core_id);
     if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
     {
-      dram_access(sys->dram, lineaddr, TRUE);
+        cache_install(sys->l2cache, lineaddr, TRUE, core_id);
+        if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
+        {
+          dram_access(sys->dram, lineaddr, TRUE);
+        }
+    }
+  } else {
+    outcome = cache_access(sys->l2cache, lineaddr, TRUE, core_id);
+    if (outcome == MISS)
+    {
+      delay += dram_access(sys->dram, lineaddr, FALSE);
+      cache_install(sys->l2cache, lineaddr, TRUE, core_id);
     }
   }
 
