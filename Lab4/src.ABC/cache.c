@@ -98,9 +98,9 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
   // Your Code Goes Here
 
   //check to see if line is in the cache
-  uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_sets)-1);
-  uns index = (uns) (lineaddr & index_mask)/CACHE_LINESIZE;
-  uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_sets);
+    uns index_mask = createMask(0, power_2(c->num_sets)-1);
+    uns index = (uns) (lineaddr & index_mask);
+    uns tag = (uns) (lineaddr / c->num_sets);
 
   for(int i = 0; i<c->num_ways; i++)
   {
@@ -147,9 +147,9 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   // Your Code Goes Here
-    uns index_mask = createMask(power_2(CACHE_LINESIZE), power_2(CACHE_LINESIZE) + power_2(c->num_sets)-1);
-    uns index = (uns) (lineaddr & index_mask)/CACHE_LINESIZE;
-    uns tag = (uns) ((lineaddr / (CACHE_LINESIZE)) / c->num_sets);
+    uns index_mask = createMask(0, power_2(c->num_sets)-1);
+    uns index = (uns) (lineaddr & index_mask);
+    uns tag = (uns) (lineaddr / c->num_sets);
 
     // make sure to set last access time
     uns victim = cache_find_victim(c, index, core_id);
