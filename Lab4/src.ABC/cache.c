@@ -104,7 +104,7 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   for(int i = 0; i<c->num_ways; i++)
   {
-      if (c->sets[index].line[i].tag == tag)
+      if (c->sets[index].line[i].valid && c->sets[index].line[i].tag == tag)
       {
           outcome = HIT;
 
@@ -154,6 +154,10 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
     uns victim = cache_find_victim(c, index, core_id);
   // Find victim using cache_find_victim
   c->last_evicted_line = c->sets[index].line[victim];
+  if (c->last_evicted_line.valid && c->last_evicted_line.dirty)
+  {
+      c->stat_dirty_evicts += 1;
+  }
   c->sets[index].line[victim].last_access_time = (uns) cycle;
   c->sets[index].line[victim].tag = tag;
   c->sets[index].line[victim].valid = TRUE;
