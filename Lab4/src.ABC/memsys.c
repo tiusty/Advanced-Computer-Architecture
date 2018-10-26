@@ -284,24 +284,17 @@ uns64   memsys_L2_access(Memsys *sys, Addr lineaddr, Flag is_writeback, uns core
   //This will help us track your memory reads and memory writes
 
   // Write backs perform off the critical path and therefore do not accumulate delays
-  if (is_writeback)
-  {
-    if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
-    {
-        cache_install(sys->l2cache, lineaddr, TRUE, core_id);
-        if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
-        {
-          dram_access(sys->dram, lineaddr, TRUE);
-        }
-    }
-  } else {
-    outcome = cache_access(sys->l2cache, lineaddr, TRUE, core_id);
+    outcome = cache_access(sys->l2cache, lineaddr, is_writeback, core_id);
     if (outcome == MISS)
     {
       delay += dram_access(sys->dram, lineaddr, FALSE);
-      cache_install(sys->l2cache, lineaddr, TRUE, core_id);
+      cache_install(sys->l2cache, lineaddr, is_writeback, core_id);
+      if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
+      {
+        dram_access(sys->dram, lineaddr, TRUE);
+      }
     }
-  }
+
 
   return delay;
 }
