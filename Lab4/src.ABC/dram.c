@@ -13,10 +13,10 @@
 
 //---- Latencies for Part C ------
 
-#define DRAM_T_ACT         45
-#define DRAM_T_CAS         45
-#define DRAM_T_PRE         45
-#define DRAM_T_BUS         10
+#define DRAM_T_ACT         45 // cose time
+#define DRAM_T_CAS         45 // access column
+#define DRAM_T_PRE         45 // open
+#define DRAM_T_BUS         10 //everything needs the BUS time
 
 
 extern MODE   SIM_MODE;
@@ -91,6 +91,25 @@ uns64   dram_access_sim_rowbuf(DRAM *dram,Addr lineaddr, Flag is_dram_write){
     // Assume a mapping with consecutive rowbufs in consecutive rows
     // You need to write this fuction to track open rows 
     // You will need to compute delay based on row hit/miss/empty
+
+    uns bank_id_mask = createMask(0, power_2(DRAM_BANKS)-1);
+    uns bank_id = lineaddr & bank_id_mask;
+    uns row_id = lineaddr/DRAM_BANKS;
+
+    if (dram->perbank_row_buf[bank_id].valid && dram->perbank_row_buf[bank_id].rowid == row_id)
+    {
+      delay += DRAM_T_CAS + DRAM_T_BUS;
+    }
+    else if (!dram->perbank_row_buf[bank_id].valid){
+      delay += DRAM_T_ACT + DRAM_T_CAS + DRAM_T_BUS;
+      dram->perbank_row_buf[bank_id].valid =TRUE;
+      dram->perbank_row_buf[bank_id].rowid = row_id;
+    }
+    else {
+        delay += DRAM_T_PRE + DRAM_T_ACT + DRAM_T_CAS + DRAM_T_BUS;
+        dram->perbank_row_buf[bank_id].valid = TRUE;
+        dram->perbank_row_buf[bank_id].rowid = row_id;
+    }
 
   
   return delay;
