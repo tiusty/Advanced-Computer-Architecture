@@ -92,9 +92,8 @@ uns64   dram_access_sim_rowbuf(DRAM *dram,Addr lineaddr, Flag is_dram_write){
     // You need to write this fuction to track open rows 
     // You will need to compute delay based on row hit/miss/empty
 
-    uns bank_id_mask = createMask(0, power_2(DRAM_BANKS)-1);
-    uns bank_id = (lineaddr/(ROWBUF_SIZE/CACHE_LINESIZE)) % DRAM_BANKS;
-    uns row_id = (lineaddr/(ROWBUF_SIZE/CACHE_LINESIZE))/DRAM_BANKS;
+    uns bank_id = (uns) ((lineaddr / (ROWBUF_SIZE / CACHE_LINESIZE)) % DRAM_BANKS);
+    uns row_id = (uns) ((lineaddr / (ROWBUF_SIZE / CACHE_LINESIZE)) / DRAM_BANKS);
 
     if (dram->perbank_row_buf[bank_id].valid && dram->perbank_row_buf[bank_id].rowid == row_id)
     {
