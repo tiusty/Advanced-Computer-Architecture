@@ -291,7 +291,12 @@ uns64   memsys_L2_access(Memsys *sys, Addr lineaddr, Flag is_writeback, uns core
       cache_install(sys->l2cache, lineaddr, is_writeback, core_id);
       if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
       {
-        dram_access(sys->dram, lineaddr, TRUE);
+          uns index_mask = createMask_2(0, power_2_2(sys->dcache->num_sets)-1);
+          uns index = (uns) (lineaddr & index_mask);
+          uns evicted_address = sys->l2cache->last_evicted_line.tag << power_2_2(sys->l2cache->num_sets);
+          evicted_address = evicted_address | index;
+
+          dram_access(sys->dram, evicted_address, TRUE);
       }
     }
 
