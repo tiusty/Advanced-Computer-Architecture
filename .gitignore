@@ -11,6 +11,7 @@ Lab3/Part_A/.idea
 Lab3/src.BC/.idea
 Lab3/.idea
 Lab4/src.ABC/.idea
+Lab4/src.DEF/.idea
 
 # ignore swap files
 *.swp
@@ -32,3 +33,5 @@ Lab3/scripts/report.txt
 # Debug files
 Lab_2/src/cmake-build-debug
 Lab3/src.BC/cmake-build-debug
+Lab4/src.ABC/cmake-build-debug
+Lab4/src.DEF/cmake-build-debug

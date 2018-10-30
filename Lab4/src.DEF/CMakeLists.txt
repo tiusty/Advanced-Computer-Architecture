@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 2.6)
+project (lab4)
+set(CMAKE_CXX_STANDARD 11)
+include_directories(cache.h core.h dram.h memsys.h types.h)
+add_executable(Lab4 cache.c core.c dram.c memsys.c sim.c)
