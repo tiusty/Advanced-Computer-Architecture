@@ -223,30 +223,96 @@ uns64 memsys_convert_vpn_to_pfn(Memsys *sys, uns64 vpn, uns core_id){
 
 
 uns64 memsys_access_modeDEF(Memsys *sys, Addr v_lineaddr, Access_Type type,uns core_id){
+  Addr lineaddr=0;
   uns64 delay=0;
-  Addr p_lineaddr=0;
+  Flag outcome = MISS;
+  uns number_of_offset_bits = power_2(PAGE_SIZE) - power_2(CACHE_LINESIZE);
 
-  p_lineaddr=v_lineaddr;
+  uns offset_mask = create_mask(0, number_of_offset_bits);
+  uns offset = v_lineaddr & offset_mask;
+
+  uns vpn = v_lineaddr >> number_of_offset_bits;
+  uns pfn = memsys_convert_vpn_to_pfn(sys, vpn, core_id);
+  lineaddr = pfn << number_of_offset_bits;
+  lineaddr = lineaddr | offset;
+
+
+  // Remember that cachline is already divided out
 
   // TODO: First convert lineaddr from virtual (v) to physical (p) using the
   // function memsys_convert_vpn_to_pfn. Page size is defined to be 4KB.
   // NOTE: VPN_to_PFN operates at page granularity and returns page addr
 
- 
   if(type == ACCESS_TYPE_IFETCH){
-    // YOU NEED TO WRITE THIS PART AND UPDATE DELAY
+    outcome = cache_access(sys->icache, lineaddr, FALSE, core_id);
+    delay += ICACHE_HIT_LATENCY;
+    if (outcome == MISS)
+    {
+      delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+      cache_install(sys->icache, lineaddr, FALSE, core_id);
+    }
   }
-    
+
 
   if(type == ACCESS_TYPE_LOAD){
-    // YOU NEED TO WRITE THIS PART AND UPDATE DELAY
+    // Check out come of L1 access
+    outcome = cache_access(sys->dcache, lineaddr, FALSE, core_id);
+    delay += DCACHE_HIT_LATENCY;
+
+    // If L1 access is a MISS then check L2
+    if (outcome == MISS)
+    {
+      // Checks L2 and returns delay.
+      delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+
+      // Since miss in L1, install cache to L1 and L2
+      cache_install(sys->dcache, lineaddr, FALSE, core_id);
+
+      // Only write back the evicted line if it is valid and the line is dirty
+      if (sys->dcache->last_evicted_line.valid && sys->dcache->last_evicted_line.dirty)
+      {
+        // Generate the evicted line address
+        uns index_mask = createMask(0, power_2(sys->dcache->num_sets)-1);
+        uns index = (uns) (lineaddr & index_mask);
+        uns evicted_address = sys->dcache->last_evicted_line.tag << power_2(sys->dcache->num_sets);
+        evicted_address = evicted_address | index;
+
+        // Write the evicted line address back to L2
+        memsys_L2_access(sys, evicted_address, TRUE, core_id);
+      }
+    }
   }
-  
+
 
   if(type == ACCESS_TYPE_STORE){
-    // YOU NEED TO WRITE THIS PART AND UPDATE DELAY
+    // Check out come of L1 access
+    outcome = cache_access(sys->dcache, lineaddr, TRUE, core_id);
+    delay += DCACHE_HIT_LATENCY;
+
+    // If L1 access is a MISS then check L2
+    if (outcome == MISS)
+    {
+      // Checks L2 and returns delay.
+      delay += memsys_L2_access(sys, lineaddr, FALSE, core_id);
+
+      // Since miss in L1, install cache to L1 and L2
+      cache_install(sys->dcache, lineaddr, TRUE, core_id);
+
+      // Only write back the evicted line if it is valid and the line is dirty
+      if (sys->dcache->last_evicted_line.valid && sys->dcache->last_evicted_line.dirty)
+      {
+        // Generate the evicted line address
+        uns index_mask = createMask(0, power_2(sys->dcache->num_sets)-1);
+        uns index = (uns) (lineaddr & index_mask);
+        uns evicted_address = sys->dcache->last_evicted_line.tag << power_2(sys->dcache->num_sets);
+        evicted_address = evicted_address | index;
+
+        // Write the evicted line address back to L2
+        memsys_L2_access(sys, evicted_address, TRUE, core_id);
+      }
+    }
   }
- 
+
   return delay;
 }
 
@@ -258,10 +324,29 @@ uns64 memsys_access_modeDEF(Memsys *sys, Addr v_lineaddr, Access_Type type,uns c
 
 uns64   memsys_L2_access(Memsys *sys, Addr lineaddr, Flag is_writeback, uns core_id){
   uns64 delay = L2CACHE_HIT_LATENCY;
+  Flag outcome = MISS;
 
   //To get the delay of L2 MISS, you must use the dram_access() function
   //To perform writebacks to memory, you must use the dram_access() function
   //This will help us track your memory reads and memory writes
+
+  // Write backs perform off the critical path and therefore do not accumulate delays
+  outcome = cache_access(sys->l2cache, lineaddr, is_writeback, core_id);
+  if (outcome == MISS)
+  {
+    delay += dram_access(sys->dram, lineaddr, FALSE);
+    cache_install(sys->l2cache, lineaddr, is_writeback, core_id);
+    if (sys->l2cache->last_evicted_line.valid && sys->l2cache->last_evicted_line.dirty)
+    {
+      uns index_mask = createMask(0, power_2(sys->l2cache->num_sets)-1);
+      uns index = (uns) (lineaddr & index_mask);
+      uns evicted_address = sys->l2cache->last_evicted_line.tag << power_2(sys->l2cache->num_sets);
+      evicted_address = evicted_address | index;
+
+      dram_access(sys->dram, evicted_address, TRUE);
+    }
+  }
+
 
   return delay;
 }

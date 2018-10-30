@@ -187,7 +187,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
       }
   }
 
-  switch (REPL_POLICY)
+  switch (c->repl_policy)
   {
       case 0: //LRU
             // since this will only occur if all the cache lines are valid, then we just take the first valid line
