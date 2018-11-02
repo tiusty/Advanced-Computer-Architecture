@@ -181,7 +181,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
   uns victim=0;
   uns last_access_time = 0;
   uns start_way = 0;
-  uns end_way = SWP_CORE0_WAYS -1;
+  uns end_way = SWP_CORE0_WAYS;
 
   switch (c->repl_policy)
   {
@@ -210,7 +210,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
               }
           }
             return (uns) (rand() % c->num_ways);
-      case 2:
+      case 2: // SMB
           if(core_id == 1)
           {
               start_way = SWP_CORE0_WAYS;
@@ -221,6 +221,14 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
                   return (uns) i;
               }
           }
+
+//          // Loop through other caches ways to see if there is invalid
+//          for(int i=start_way; i<end_way; i++) {
+//              if (!c->sets[set_index].line[i].valid) {
+//                  return (uns) i;
+//              }
+//          }
+
           // since this will only occur if all the cache lines are valid, then we just take the first valid line
           //  as the last_access_time (we don't have to worry about getting non-valid line)
           last_access_time = c->sets[set_index].line[start_way].last_access_time;
