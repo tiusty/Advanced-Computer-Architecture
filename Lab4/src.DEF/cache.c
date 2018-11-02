@@ -230,42 +230,19 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             }
         }
 
-        // These conditions only occurs when the caches are filled up
-
-        // Find the start of the core's instructions
-        for(int i=0; i<c->num_ways; i++)
-        {
-            if(c->sets[set_index].line[i].core_id == core_id)
-            {
-                start_way = i;
-                break;
-            }
-        }
-
-        // Find the end of the core's instructions
-        if (core_id == 0)
-        {
-            for(int i = start_way; i<c->num_ways; i++){
-
-                if (c->sets[set_index].line[i].core_id != core_id)
-                {
-                    end_way = i;
-                    break;
-                }
-
-            }
-        } else {
-            end_way = c->num_ways;
-        }
-
-
 
           // since this will only occur if all the cache lines are valid, then we just take the first valid line
           //  as the last_access_time (we don't have to worry about getting non-valid line)
-          last_access_time = c->sets[set_index].line[start_way].last_access_time;
-          for(uns j=start_way; j<end_way; j++)
+            uns found_first = 0;
+          for(uns j=0; j<c->num_ways; j++)
           {
-              if (c->sets[set_index].line[j].last_access_time < last_access_time)
+              if (found_first == 0 && c->sets[set_index].line[j].core_id == core_id)
+              {
+                  last_access_time = c->sets[set_index].line[j].last_access_time;
+                  found_first = 1;
+              }
+              if (found_first == 1 && c->sets[set_index].line[j].core_id == core_id
+              && c->sets[set_index].line[j].last_access_time < last_access_time)
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
                   victim = j;
