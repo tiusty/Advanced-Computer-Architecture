@@ -221,6 +221,17 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
                   return (uns) i;
               }
           }
+          // since this will only occur if all the cache lines are valid, then we just take the first valid line
+          //  as the last_access_time (we don't have to worry about getting non-valid line)
+          last_access_time = c->sets[set_index].line[start_way].last_access_time;
+          for(uns j=start_way; j<end_way; j++)
+          {
+              if (c->sets[set_index].line[j].last_access_time < last_access_time)
+              {
+                  last_access_time = c->sets[set_index].line[j].last_access_time;
+                  victim = j;
+              }
+          }
           break;
       default:break;
   }
