@@ -211,23 +211,54 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
           }
             return (uns) (rand() % c->num_ways);
       case 2: // SMB
-          if(core_id == 1)
-          {
-              start_way = SWP_CORE0_WAYS;
-              end_way = c->num_ways;
-          }
-          for(int i=start_way; i<end_way; i++) {
-              if (!c->sets[set_index].line[i].valid) {
-                  return (uns) i;
-              }
-          }
+        //Check if core_0 has any invalid or there is any spots with core_1 is using
+        if (core_id == 1)
+        {
+            // Loop through other caches ways to see if there is invalid
+            for(int i=c->num_ways-1; i>=0; i--) {
+                // If it finds a invalid line or it finds a line that isn't the core's in its allocation
+                if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i >= SWP_CORE0_WAYS)) {
+                    return (uns) i;
+                }
+            }
+        } else {
+            // Loop through other caches ways to see if there is invalid
+            for(int i=0; i<c->num_ways; i++) {
+                if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i < SWP_CORE0_WAYS)) {
+                    return (uns) i;
+                }
+            }
+        }
 
-//          // Loop through other caches ways to see if there is invalid
-//          for(int i=start_way; i<end_way; i++) {
-//              if (!c->sets[set_index].line[i].valid) {
-//                  return (uns) i;
-//              }
-//          }
+        // These conditions only occurs when the caches are filled up
+
+        // Find the start of the core's instructions
+        for(int i=0; i<c->num_ways; i++)
+        {
+            if(c->sets[set_index].line[i].core_id == core_id)
+            {
+                start_way = i;
+                break;
+            }
+        }
+
+        // Find the end of the core's instructions
+        if (core_id == 0)
+        {
+            for(int i = start_way; i<c->num_ways; i++){
+
+                if (c->sets[set_index].line[i].core_id != core_id)
+                {
+                    end_way = i;
+                    break;
+                }
+
+            }
+        } else {
+            end_way = c->num_ways;
+        }
+
+
 
           // since this will only occur if all the cache lines are valid, then we just take the first valid line
           //  as the last_access_time (we don't have to worry about getting non-valid line)
