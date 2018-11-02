@@ -8,6 +8,7 @@
 extern uns64 cycle; // You can use this as timestamp for LRU
 extern uns64 CACHE_LINESIZE;
 extern uns64 REPL_POLICY; // 0:LRU 1:RAND
+extern uns64 SWP_CORE0_WAYS;
 
 ////////////////////////////////////////////////////////////////////
 // ------------- DO NOT MODIFY THE INIT FUNCTION -----------
@@ -179,17 +180,17 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 uns cache_find_victim(Cache *c, uns set_index, uns core_id){
   uns victim=0;
   uns last_access_time = 0;
-
-  // TODO: Write this using a switch case statement
-  for(int i=0; i<c->num_ways; i++) {
-      if (!c->sets[set_index].line[i].valid) {
-          return (uns) i;
-      }
-  }
+  uns start_way = 0;
+  uns end_way = SWP_CORE0_WAYS -1;
 
   switch (c->repl_policy)
   {
       case 0: //LRU
+          for(int i=0; i<c->num_ways; i++) {
+              if (!c->sets[set_index].line[i].valid) {
+                  return (uns) i;
+              }
+          }
             // since this will only occur if all the cache lines are valid, then we just take the first valid line
             //  as the last_access_time (we don't have to worry about getting non-valid line)
             last_access_time = c->sets[set_index].line[0].last_access_time;
@@ -203,7 +204,24 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             }
             break;
       case 1: //RAND
+          for(int i=0; i<c->num_ways; i++) {
+              if (!c->sets[set_index].line[i].valid) {
+                  return (uns) i;
+              }
+          }
             return (uns) (rand() % c->num_ways);
+      case 2:
+          if(core_id == 1)
+          {
+              start_way = SWP_CORE0_WAYS;
+              end_way = c->num_ways;
+          }
+          for(int i=start_way; i<end_way; i++) {
+              if (!c->sets[set_index].line[i].valid) {
+                  return (uns) i;
+              }
+          }
+          break;
       default:break;
   }
 
