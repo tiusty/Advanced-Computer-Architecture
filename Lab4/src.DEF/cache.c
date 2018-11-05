@@ -213,7 +213,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
         if (core_id == 1)
         {
             // Loop through other caches ways to see if there is invalid
-            for(int i=c->num_ways-1; i>=SWP_CORE0_WAYS; i--) {
+            for(int i=c->num_ways-1; i>=0; i--) {
                 // If it finds a invalid line or it finds a line that isn't the core's in its allocation
                 if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i >= SWP_CORE0_WAYS)) {
                     return (uns) i;
@@ -221,7 +221,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             }
         } else {
             // Loop through other caches ways to see if there is invalid
-            for(int i=0; i<SWP_CORE0_WAYS; i++) {
+            for(int i=0; i<c->num_ways; i++) {
                 if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i < SWP_CORE0_WAYS)) {
                     return (uns) i;
                 }
