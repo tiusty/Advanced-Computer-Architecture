@@ -238,6 +238,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
                   found_first = 1;
+                  victim = j;
               }
               if (found_first == 1 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_id
               && c->sets[set_index].line[j].last_access_time < last_access_time)
