@@ -105,7 +105,7 @@ Flag cache_access(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 
   for(int i = 0; i<c->num_ways; i++)
   {
-      if (c->sets[index].line[i].valid && c->sets[index].line[i].tag == tag)
+      if (c->sets[index].line[i].valid && c->sets[index].line[i].tag == tag && c->sets[index].line[i].core_id == core_id)
       {
           outcome = HIT;
 
