@@ -180,8 +180,6 @@ void cache_install(Cache *c, Addr lineaddr, uns is_write, uns core_id){
 uns cache_find_victim(Cache *c, uns set_index, uns core_id){
   uns victim=0;
   uns last_access_time = 0;
-  uns start_way = 0;
-  uns end_way = SWP_CORE0_WAYS;
 
   switch (c->repl_policy)
   {
@@ -236,12 +234,12 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             uns found_first = 0;
           for(uns j=0; j<c->num_ways; j++)
           {
-              if (found_first == 0 && c->sets[set_index].line[j].core_id == core_id)
+              if (found_first == 0 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_id)
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
                   found_first = 1;
               }
-              if (found_first == 1 && c->sets[set_index].line[j].core_id == core_id
+              if (found_first == 1 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_id
               && c->sets[set_index].line[j].last_access_time < last_access_time)
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
