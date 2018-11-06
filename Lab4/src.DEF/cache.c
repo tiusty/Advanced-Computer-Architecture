@@ -209,13 +209,14 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
           }
             return (uns) (rand() % c->num_ways);
       case 2: // SMB
-        //Check if core_0 has any invalid or there is any spots with core_1 is using
+            // If there is any invalid lines then just fill up the cache
           for(int i=0; i<c->num_ways; i++) {
               if (!c->sets[set_index].line[i].valid) {
                   return (uns) i;
               }
           }
 
+          // Check to see how many cache lines core_0 has
           uns num_core_0 = 0;
           for(int i=0; i<c->num_ways; i++) {
               if (c->sets[set_index].line[i].core_id == 0) {
@@ -223,6 +224,8 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
               }
           }
 
+          // Depending on how many lines that core has in the cache, determine which cacheline to evict
+          //    If core_0 has over its allocated, then evict a line in core_0 etc
           uns core_swap = 0;
           if (num_core_0 < SWP_CORE0_WAYS) {
               core_swap = 1;
@@ -234,8 +237,7 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
           }
 
 
-          // since this will only occur if all the cache lines are valid, then we just take the first valid line
-          //  as the last_access_time (we don't have to worry about getting non-valid line)
+          // Now run LRU over the core that needs to evict a line to determine which line will get replaced
             uns found_first = 0;
           for(uns j=0; j<c->num_ways; j++)
           {
