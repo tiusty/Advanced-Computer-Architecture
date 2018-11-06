@@ -210,23 +210,28 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             return (uns) (rand() % c->num_ways);
       case 2: // SMB
         //Check if core_0 has any invalid or there is any spots with core_1 is using
-        if (core_id == 1)
-        {
-            // Loop through other caches ways to see if there is invalid
-            for(int i=c->num_ways-1; i>=0; i--) {
-                // If it finds a invalid line or it finds a line that isn't the core's in its allocation
-                if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i >= SWP_CORE0_WAYS)) {
-                    return (uns) i;
-                }
-            }
-        } else {
-            // Loop through other caches ways to see if there is invalid
-            for(int i=0; i<c->num_ways; i++) {
-                if (!c->sets[set_index].line[i].valid || (c->sets[set_index].line[i].core_id != core_id && i < SWP_CORE0_WAYS)) {
-                    return (uns) i;
-                }
-            }
-        }
+          for(int i=0; i<c->num_ways; i++) {
+              if (!c->sets[set_index].line[i].valid) {
+                  return (uns) i;
+              }
+          }
+
+          uns num_core_0 = 0;
+          for(int i=0; i<c->num_ways; i++) {
+              if (c->sets[set_index].line[i].core_id == 0) {
+                  num_core_0++;
+              }
+          }
+
+          uns core_swap = 0;
+          if (num_core_0 < SWP_CORE0_WAYS) {
+              core_swap = 1;
+          } else if (num_core_0 == SWP_CORE0_WAYS)
+          {
+           core_swap = core_id;
+          } else {
+              core_swap = 0;
+          }
 
 
           // since this will only occur if all the cache lines are valid, then we just take the first valid line
@@ -234,13 +239,13 @@ uns cache_find_victim(Cache *c, uns set_index, uns core_id){
             uns found_first = 0;
           for(uns j=0; j<c->num_ways; j++)
           {
-              if (found_first == 1 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_id
+              if (found_first == 1 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_swap
                   && c->sets[set_index].line[j].last_access_time < last_access_time)
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
                   victim = j;
               }
-              if (found_first == 0 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_id)
+              if (found_first == 0 && c->sets[set_index].line[j].valid && c->sets[set_index].line[j].core_id == core_swap)
               {
                   last_access_time = c->sets[set_index].line[j].last_access_time;
                   found_first = 1;
