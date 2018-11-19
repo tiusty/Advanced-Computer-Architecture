@@ -1,0 +1,5 @@
+cmake_minimum_required (VERSION 2.6)
+project (lab5)
+set(CMAKE_CXX_STANDARD 11)
+include_directories(cache.h mtrand.h types.h)
+add_executable(cache.cc conflict.cc sim.cc)
