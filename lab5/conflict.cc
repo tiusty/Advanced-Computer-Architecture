@@ -59,7 +59,7 @@ void fill_conflict_list(Cache *c, uns num_ways, uns probe_addr){
       cache_access_install(c, i);
     if( cache_access_install(c, probe_addr)==MISS ){
       uns tag = probe_addr >> 10;
-      uns addr = tag << 10;
+      uns addr = tag << 9;
       addr = addr | i;
       miss++;
 
