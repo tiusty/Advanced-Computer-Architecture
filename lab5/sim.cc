@@ -73,7 +73,7 @@ int main(int argc, char** argv)
    // start timer
   gettimeofday(&t2, NULL);
 
-  printf("Search took %4.2f seconds\n", elapsedTime(t1,t2)/1000);
+  printf("Search took %6.3f seconds\n", elapsedTime(t1,t2)/1000.0);
   
 
   test_conflict_list(mycache, NUM_WAYS, PROBE_ADDR);

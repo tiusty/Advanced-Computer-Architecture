@@ -41,12 +41,12 @@ void cache_reset(Cache *c){
   }
 
   // initalize TBR
-  for(uns ii; ii< TBR_ENTRIES; ii++){
+  for(ii=0; ii< TBR_ENTRIES; ii++){
     c->tbr[ii]=ii;
   }
 
   
-  for(uns ii; ii< TBR_ENTRIES; ii++){
+  for(ii=0; ii< TBR_ENTRIES; ii++){
     uns dest = randgen->randInt()%(TBR_ENTRIES);
     uns tmp = c->tbr[dest];
     c->tbr[dest] = c->tbr[ii];
