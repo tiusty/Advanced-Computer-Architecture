@@ -58,15 +58,16 @@ void fill_conflict_list(Cache *c, uns num_ways, uns probe_addr){
   for (int i=0; i<2^10; i++){
       cache_access_install(c, i);
     if( cache_access_install(c, probe_addr)==MISS ){
-      uns tag = probe_addr >> 10;
-      uns addr = tag << 9;
-      addr = addr | i;
       miss++;
 
       if (miss == 1) {
-        cline_addr1 = addr;
+        cline_addr1 = i;
       } else if (miss == 2) {
-        cline_addr2 =addr;
+        cline_addr2 = i;
+      } else if (miss == 3) {
+        cline_addr3 = i;
+      } else if (miss == 4) {
+        cline_addr4 = i;
       }
     }
 
