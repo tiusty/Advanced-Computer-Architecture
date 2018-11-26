@@ -12,31 +12,6 @@ extern uns conflict_list[8];
 
 ////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////
-unsigned int power_2(uns64 number)
-{
-  int power = -1;
-  int value = 1;
-  while(value < number)
-  {
-    value = 1;
-    power += 1;
-    for(int i=0; i<power; i++)
-    {
-      value = value *2;
-    }
-  }
-  return power;
-}
-
-unsigned createMask(unsigned a, unsigned b)
-{
-  unsigned r = 0;
-  for (unsigned i=a; i<=b; i++)
-    r |= 1 << i;
-
-  return r;
-}
-
 
 void fill_conflict_list(Cache *c, uns num_ways, uns probe_addr){
   uns miss = 0;
