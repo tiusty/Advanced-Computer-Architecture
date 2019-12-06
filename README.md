@@ -1,5 +1,5 @@
 # Advanced_Computer_architecture
-Code for ECE 6100 advanced computer architecture
+Code for advanced computer architecture
 
 The labs use trace driven simulations/committed instructions and thus the labs are meant to count number of cycles taken to show efficiency of different implementations. No data is being passed aroudn in the traces
 
